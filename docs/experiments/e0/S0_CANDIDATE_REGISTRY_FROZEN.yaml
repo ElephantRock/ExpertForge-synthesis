@@ -1,0 +1,157 @@
+schema_id: E0-S0-CANDIDATE-REGISTRY-v0
+experiment_id: E0
+contract_candidate_digest: 25c829a63b7e6cf17d43c8b09b0fa6cd1cf0d739dac7fee8f0042a0a278e3dc6
+status: FROZEN_FOR_QUALIFICATION_BOOTSTRAP
+prepared_date: 2026-09-07
+candidate_count: 3
+registry_rules:
+  finite_before_source_qualification: true
+  candidate_addition_after_first_source_score: prohibited
+  candidate_removal_after_first_source_score: prohibited_except_objective_static_ineligibility
+  selection_rule: lowest_median_active_wall_time_among_all_qualified_candidates
+  benchmark_repetitions: 3
+  tie_within_fraction: 0.01
+  tie_break:
+  - lower_peak_accelerator_memory
+  - lower_parameter_count
+  - lexicographically_smaller_immutable_source_id
+common_execution_contract:
+  model_family: dense_causal_language_model
+  moe_allowed: false
+  execution_precision: bfloat16
+  live_storage_backed_weight_paging: prohibited
+  bounded_host_memory_offload: allowed
+  source_output_generation_tokens: 0
+  complete_prompt_required: true
+  truncation: prohibited
+  hidden_width_minimum: 256
+  required_runtime_checks:
+  - stable_hidden_state_access
+  - raw_next_token_logits_access
+  - TPDS_output_head_replay
+  - deterministic_same_environment_forward
+  - contextual_single_token_A_B_C
+  - source_format_compliance_at_least_0_95
+  - decision_25_resource_feasibility
+license_review_policy:
+  registry_uses_only_models_whose_repository_metadata_identifies_a_permissive_OSI_style_license: true
+  project_specific_legal_review_required_before_registry_status_FROZEN: true
+  note: Repository license metadata is evidence for candidate screening only. The project authority must separately attest that the intended extraction, distillation, and derived-artifact use is permitted for the project. This registry does not provide legal advice.
+candidates:
+- registry_id: S0C0
+  immutable_source_id: HuggingFaceTB/SmolLM2-1.7B-Instruct@31b70e2e869a7173562077fd711b654946d38674
+  repository_id: HuggingFaceTB/SmolLM2-1.7B-Instruct
+  immutable_revision: 31b70e2e869a7173562077fd711b654946d38674
+  architecture_class: LlamaForCausalLM
+  model_type: llama
+  published_parameter_scale: 1.7B
+  hidden_size: 2048
+  num_hidden_layers: 24
+  num_attention_heads: 32
+  num_key_value_heads: 32
+  max_position_embeddings: 8192
+  config_declared_dtype: bfloat16
+  proposed_execution_precision: bfloat16
+  model_weight_payload_reference: approximately_3.42_GB_safetensors
+  license_spdx: Apache-2.0
+  license_review_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  extraction_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  distillation_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  derived_artifact_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  static_architecture_precheck: PASS
+  static_interface_precheck:
+    standard_causal_lm_logits_and_hidden_states_expected: true
+    exact_TPDS_module_binding: RUNTIME_REQUIRED
+    contextual_single_token_A_B_C: RUNTIME_REQUIRED
+    deterministic_forward: RUNTIME_REQUIRED
+  resource_precheck:
+    12_GiB_accelerator_feasibility: LIKELY_DIRECT_RESIDENCY_BUT_RUNTIME_REQUIRED
+    host_offload_expected: false
+  evidence:
+    model_tree: https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct/tree/31b70e2e869a7173562077fd711b654946d38674
+    config: https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct/blob/31b70e2e869a7173562077fd711b654946d38674/config.json
+    license: https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct/blob/31b70e2e869a7173562077fd711b654946d38674/LICENSE
+- registry_id: S0C1
+  immutable_source_id: Qwen/Qwen2.5-7B-Instruct@a09a35458c702b33eeacc393d103063234e8bc28
+  repository_id: Qwen/Qwen2.5-7B-Instruct
+  immutable_revision: a09a35458c702b33eeacc393d103063234e8bc28
+  architecture_class: Qwen2ForCausalLM
+  model_type: qwen2
+  published_parameter_scale: 7.61B
+  hidden_size: 3584
+  num_hidden_layers: 28
+  num_attention_heads: 28
+  num_key_value_heads: 4
+  max_position_embeddings_config: 32768
+  model_card_context_length: 131072
+  config_declared_dtype: bfloat16
+  proposed_execution_precision: bfloat16
+  model_weight_payload_reference: approximately_15.2_GB_repository_weight_payload
+  license_spdx: Apache-2.0
+  license_review_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  extraction_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  distillation_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  derived_artifact_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  static_architecture_precheck: PASS
+  static_interface_precheck:
+    standard_causal_lm_logits_and_hidden_states_expected: true
+    exact_TPDS_module_binding: RUNTIME_REQUIRED
+    contextual_single_token_A_B_C: RUNTIME_REQUIRED
+    deterministic_forward: RUNTIME_REQUIRED
+  resource_precheck:
+    12_GiB_accelerator_feasibility: REQUIRES_BOUNDED_HOST_OFFLOAD_OR_EQUIVALENT_RESIDENT_WORKING_SET
+    host_offload_expected: true
+  evidence:
+    model_tree: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/tree/a09a35458c702b33eeacc393d103063234e8bc28
+    config: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/a09a35458c702b33eeacc393d103063234e8bc28/config.json
+    model_card: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/a09a35458c702b33eeacc393d103063234e8bc28/README.md
+    license: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/a09a35458c702b33eeacc393d103063234e8bc28/LICENSE
+- registry_id: S0C2
+  immutable_source_id: mistralai/Mistral-7B-Instruct-v0.3@c170c708c41dac9275d15a8fff4eca08d52bab71
+  repository_id: mistralai/Mistral-7B-Instruct-v0.3
+  immutable_revision: c170c708c41dac9275d15a8fff4eca08d52bab71
+  architecture_class: MistralForCausalLM
+  model_type: mistral
+  published_parameter_scale: 7B_class
+  hidden_size: 4096
+  num_hidden_layers: 32
+  num_attention_heads: 32
+  num_key_value_heads: 8
+  max_position_embeddings: 32768
+  config_declared_dtype: bfloat16
+  proposed_execution_precision: bfloat16
+  model_weight_payload_reference: approximately_14.5_GB_model_weights_repository_contains_duplicate_formats
+  license_spdx: Apache-2.0
+  license_review_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  extraction_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  distillation_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  derived_artifact_permission_status: PROJECT_AUTHORITY_ACCEPTED_FOR_QUALIFICATION
+  static_architecture_precheck: PASS
+  static_interface_precheck:
+    standard_causal_lm_logits_and_hidden_states_expected: true
+    exact_TPDS_module_binding: RUNTIME_REQUIRED
+    contextual_single_token_A_B_C: RUNTIME_REQUIRED
+    deterministic_forward: RUNTIME_REQUIRED
+  resource_precheck:
+    12_GiB_accelerator_feasibility: REQUIRES_BOUNDED_HOST_OFFLOAD_OR_EQUIVALENT_RESIDENT_WORKING_SET
+    host_offload_expected: true
+  evidence:
+    model_tree: https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3/tree/c170c708c41dac9275d15a8fff4eca08d52bab71
+    config: https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3/blob/c170c708c41dac9275d15a8fff4eca08d52bab71/config.json
+    license: https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3/blob/c170c708c41dac9275d15a8fff4eca08d52bab71/LICENSE
+excluded_pre_registry_candidates:
+- repository_id: Qwen/Qwen2.5-3B-Instruct
+  reason: Official repository metadata identifies the license as qwen-research rather than Apache-2.0. It is omitted from the initial clean-license registry to avoid introducing a project-specific legal interpretation into the qualification critical path. It may only enter a later registry version before any source score is observed and with explicit project authority/legal review.
+  evidence: https://huggingface.co/Qwen/Qwen2.5-3B-Instruct/tree/main
+runtime_authority_boundary:
+  source_scoring_authorized: true
+  tokenizer_runtime_inspection_authorized: true
+  model_download_for_qualification_authorized: true
+  terminal_E0_evidence_authorized: false
+  note: Authority is bounded to the Q0-Q6 qualification/bootstrap scope. It does not authorize A0 or terminal E0 evidence.
+authority_binding:
+  authority_role: PROJECT_CONTRACT_AUTHORITY
+  authority_id: PROJECT_CONTRACT_AUTHORITY:chat-user
+  attestation_basis: 'Explicit user approval in the project conversation: "Agreed, proceed."'
+  approved_at: '2026-09-07T22:22:00+03:00'
+  scope: qualification_bootstrap_only
