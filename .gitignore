@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local qualification outputs / model caches
+.local/
+artifacts/local/
+models/
+checkpoints/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Generated CMDR qualification corpora are reproducible from scripts and manifests
+local_data/
+
+# Secrets / environment files
+.env
+.env.*
+!.env.example
