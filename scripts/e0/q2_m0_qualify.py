@@ -7,15 +7,17 @@ Usage:
 Frozen contract: docs/experiments/e0/Q2_Q3_EXECUTION_RELEASE.md.
 Data: hash-verified Q1 corpus under local_data/e0_qualification_bootstrap/Q1.
 
-Interpretation notes recorded in every manifest (flagged for project
-authority; no frozen value is altered by them):
-  - weight_decay scope: the release states "weight decay 0.05" without
-    exclusions. Default --wd-scope all applies it to every trainable
-    parameter (literal reading). --wd-scope exclude_norm_bias applies the
-    common LLM convention instead. The choice is recorded in manifests.
-  - training permutation seeds are derived as
-    sha256("ExpertForge-E0-Q2|M0|perm|<seed>|<epoch>")[:8] big-endian.
-  - gradient accumulation divides each microbatch mean loss by 8 so the
+Interpretation notes — RESOLVED by project authority (Q2_FULL_RUN_RELEASE.md):
+  - R1 (weight decay): exclude_norm_bias is authoritative. Weight decay 0.05
+    applies to token embeddings, attention matrices, MLP matrices, and the
+    classifier matrix; 0 applies to every RMSNorm scale and the classifier
+    bias (frozen Decision-22 parameter-group semantics). Scientific Q2
+    invocations fail closed if `all` is requested; `all` remains available
+    only for explicitly non-scientific diagnostics.
+  - R2 (permutation derivation): approved as implemented —
+    sha256("ExpertForge-E0-Q2|M0|perm|<seed>|<epoch>")[:8] big-endian,
+    zero-based epochs.
+  - Gradient accumulation divides each microbatch mean loss by 8 so the
     accumulated gradient equals the exact 128-example batch mean.
 """
 
@@ -478,7 +480,8 @@ def run_smoke(data_root: Path, out_path: Path, repo_root: Path) -> dict:
         torch.manual_seed(FROZEN_SEEDS[0])
         model = build_model("C0", FROZEN_SEEDS[0], device)
         optimizer = torch.optim.AdamW(
-            parameter_groups(model, "all"), lr=learning_rate(1), betas=BETAS, eps=ADAM_EPS,
+            parameter_groups(model, "exclude_norm_bias"), lr=learning_rate(1),
+            betas=BETAS, eps=ADAM_EPS,
         )
         rows = [train_rows[i] for i in TrainStream(len(train_rows), FROZEN_SEEDS[0]).take(MICROBATCH)]
         ids, decide, labels = collate(rows, device)
@@ -493,6 +496,7 @@ def run_smoke(data_root: Path, out_path: Path, repo_root: Path) -> dict:
     loss1, norm1, finite1, model1 = one_step_loss()
     loss2, norm2, finite2, model2 = one_step_loss()
     checks["one_forward_backward_step"] = {
+        "wd_scope": "exclude_norm_bias",
         "loss_finite": loss1 == loss1 and abs(loss1) < 1e6,
         "grads_finite": finite1,
         "loss_bitexact_repeatable": loss1 == loss2,
@@ -540,7 +544,14 @@ def main() -> None:
         help="non-scientific: 16-update C0 run exercising the full training/eval/checkpoint path",
     )
     parser.add_argument("--candidate", choices=list(CANDIDATES))
-    parser.add_argument("--wd-scope", choices=["all", "exclude_norm_bias"], default="all")
+    parser.add_argument(
+        "--wd-scope",
+        choices=["exclude_norm_bias", "all"],
+        default="exclude_norm_bias",
+        help="exclude_norm_bias is the frozen Decision-22 semantics (R1). "
+        "'all' is permitted only for non-scientific diagnostics and is "
+        "rejected on scientific full-run invocations.",
+    )
     parser.add_argument(
         "--data-root", type=Path, default=Path("local_data/e0_qualification_bootstrap/Q1")
     )
@@ -580,6 +591,13 @@ def main() -> None:
 
     if not args.candidate:
         parser.error("provide --candidate or --smoke")
+
+    if args.wd_scope == "all":
+        # R1 (Q2_FULL_RUN_RELEASE.md): scientific Q2 must use exclude_norm_bias.
+        raise SystemExit(
+            "Scientific Q2 execution forbids --wd-scope all "
+            "(frozen Decision-22 parameter-group semantics)."
+        )
 
     torch.use_deterministic_algorithms(True)
     torch.backends.cuda.matmul.allow_tf32 = False

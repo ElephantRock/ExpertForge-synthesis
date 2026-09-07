@@ -9,16 +9,15 @@ Usage:
 Frozen contract: docs/experiments/e0/Q2_Q3_EXECUTION_RELEASE.md
 Frozen registry: docs/experiments/e0/S0_CANDIDATE_REGISTRY_FROZEN.yaml
 
-Interpretation notes recorded in manifests (flagged for project authority):
+Interpretation notes — RESOLVED by project authority (Q2_FULL_RUN_RELEASE.md):
+  - R3 (answer context): source content ends with "Answer:" and no trailing
+    newline; the ONLY authorized continuations are the exact strings
+    " A", " B", " C" — no fallback to bare letters.
+  - R4 (replay subset): within each (label, depth) cell of eval_ID, rank by
+    ascending sha256("ExpertForge-E0-Q3|replay|<sample_id>") and take the
+    first 20 (240 total).
   - Source prompt = Q1-canonical Facts/Rules/Query lines followed by the exact
-    release decision suffix; no trailing newline after "Answer:".
-  - Contextual A/B/C tokens: for each letter, the continuation forms "
-    <L>" (preferred) then "<L>" are tested against the chat-templated prompt;
-    the first form that appends exactly one token for ALL THREE letters is
-    selected, and the three IDs must be distinct.
-  - Replay subset: within each (label, depth) cell of eval_ID, examples are
-    ranked by sha256("ExpertForge-E0-Q3|replay|<sample_id>") ascending and the
-    first 20 are taken (240 total).
+    frozen decision suffix from Q2_Q3_EXECUTION_RELEASE.md.
 """
 
 from __future__ import annotations
@@ -189,39 +188,33 @@ class SourceHarness:
         return self.tokenizer.encode(self.templated_text(example), add_special_tokens=False)
 
     def abc_contextual_tokens(self, probe_example: dict) -> dict:
-        """At the actual answer context, verify A/B/C are three distinct single tokens.
-
-        Continuation tokenization is measured against the exact chat-templated
-        prompt: tokenize(base + answer) must append exactly one token over
-        tokenize(base), without resegmenting the prompt prefix.
+        """R3 (Q2_FULL_RUN_RELEASE.md): the only authorized continuations are
+        the exact UTF-8 strings " A", " B", " C" at the chat-templated answer
+        context — no fallback forms. Tokenize(base + continuation) must append
+        exactly one token over tokenize(base), without resegmenting the prompt.
         """
         base_text = self.templated_text(probe_example)
         base_ids = self.tokenizer.encode(base_text, add_special_tokens=False)
-        for form in (" {L}", "{L}"):
-            ids_by_letter: dict[str, int] = {}
-            ok = True
-            for letter in "ABC":
-                full_ids = self.tokenizer.encode(
-                    base_text + form.format(L=letter), add_special_tokens=False
-                )
-                appended = full_ids[len(base_ids) :]
-                if len(appended) != 1 or full_ids[: len(base_ids)] != base_ids:
-                    ok = False
-                    break
-                ids_by_letter[letter] = appended[0]
-            if ok and len(set(ids_by_letter.values())) == 3:
-                return {
-                    "answer_form": form.replace("{L}", "<L>"),
-                    "token_ids": dict(ids_by_letter),
-                    "token_pieces": {
-                        l: self.tokenizer.convert_ids_to_tokens(i) for l, i in ids_by_letter.items()
-                    },
-                    "token_decoded": {
-                        l: self.tokenizer.decode([i], skip_special_tokens=False)
-                        for l, i in ids_by_letter.items()
-                    },
-                }
-        return {}
+        ids_by_letter: dict[str, int] = {}
+        for letter in "ABC":
+            full_ids = self.tokenizer.encode(base_text + f" {letter}", add_special_tokens=False)
+            appended = full_ids[len(base_ids) :]
+            if len(appended) != 1 or full_ids[: len(base_ids)] != base_ids:
+                return {}
+            ids_by_letter[letter] = appended[0]
+        if len(set(ids_by_letter.values())) != 3:
+            return {}
+        return {
+            "answer_form": " <L>",
+            "token_ids": dict(ids_by_letter),
+            "token_pieces": {
+                l: self.tokenizer.convert_ids_to_tokens(i) for l, i in ids_by_letter.items()
+            },
+            "token_decoded": {
+                l: self.tokenizer.decode([i], skip_special_tokens=False)
+                for l, i in ids_by_letter.items()
+            },
+        }
 
     # -- forward / TPDS ----------------------------------------------------
 

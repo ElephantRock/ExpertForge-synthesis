@@ -1,6 +1,6 @@
 {
   "schema_id": "E0-Q2-SMOKE-v0",
-  "git_commit": "304f19d04f22f0ff8aff370498831fc5bffcc6b5",
+  "git_commit": "1070a61c4f48cef4d02bc6ac6305c31fe09b4117",
   "device": "cuda",
   "torch_version": "2.14.0+cu126",
   "checks": {
@@ -53,6 +53,7 @@
       "ok": true
     },
     "one_forward_backward_step": {
+      "wd_scope": "exclude_norm_bias",
       "loss_finite": true,
       "grads_finite": true,
       "loss_bitexact_repeatable": true,

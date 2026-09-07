@@ -9,8 +9,10 @@
 - Q3 capability/headroom: **BLOCKED on Q2 Arm-A pilot results** (per frozen release).
 - Final 108,000-example corpus generation: **NOT AUTHORIZED until Q2/Q3 close.**
 
-Open interpretation questions flagged to project authority (no frozen value altered):
-1. Weight-decay scope: `weight decay 0.05` — applied to all trainable parameters by default (`--wd-scope all`, literal reading); `exclude_norm_bias` (common LLM convention) is implemented as a switch.
-2. Training permutation seed derivation: `sha256("ExpertForge-E0-Q2|M0|perm|<seed>|<epoch>")[:8]` big-endian.
-3. Source decision suffix appended with no trailing newline after `Answer:`; A/B/C contextual form chosen as `" A"/" B"/" C"` (all three single tokens for all registry tokenizers).
-4. Q3 replay subset: within each label×depth cell of eval_ID, rank by `sha256("ExpertForge-E0-Q3|replay|<sample_id>")` ascending, take first 20 (240 total).
+Interpretation questions — **RESOLVED by project authority** in `Q2_FULL_RUN_RELEASE.md` (commit `1070a61c4f48cef4d02bc6ac6305c31fe09b4117`), recorded on issue #1 and draft PR #2:
+1. **R1 — weight decay: `exclude_norm_bias`** (frozen Decision-22 parameter-group semantics). Applied in Q2 scientific execution; scientific invocations requesting `--wd-scope all` fail closed. Q2 smoke and the 16-update path exercise were rerun under the corrected scope: PASS.
+2. **R2 — permutation derivation: approved as implemented** — `sha256("ExpertForge-E0-Q2|M0|perm|<seed>|<epoch>")[:8]` big-endian, zero-based epochs. Frozen.
+3. **R3 — Q3 answer context: exact leading-space continuations `" A"/" B"/" C"`, no trailing newline, no fallback forms.** Fallback removed; all three Q3 smokes rerun: PASS.
+4. **R4 — replay subset: approved as implemented** — 20 per label×depth cell by ascending `sha256("ExpertForge-E0-Q3|replay|<sample_id>")`. Frozen.
+
+Correction checkpoint status: the two narrow corrections (R1 enforcement, R3 fallback removal) are in this commit; all smoke manifests regenerated under the corrected rules and PASS. Full 8,000-update Q2 runs were **not** started from `f5d5a88`; C0 is authorized to begin from this checkpoint after GitHub-side validation.
