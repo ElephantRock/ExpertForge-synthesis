@@ -1,0 +1,47 @@
+﻿{
+    "schema_id":  "E0-WINDOWS-ENVIRONMENT-SNAPSHOT-v0",
+    "generated_utc":  "2026-09-07T19:55:39.3783155Z",
+    "repository":  {
+                       "origin":  "https://github.com/ElephantRock/ExpertForge-synthesis",
+                       "branch":  "e0/qualification-bootstrap",
+                       "commit_sha":  "c4e9a4543cb210f600463458d207c3432e2e1d01",
+                       "dirty_at_capture":  false
+                   },
+    "os":  {
+               "caption":  "Microsoft Windows 11 Pro",
+               "version":  "10.0.26200",
+               "build_number":  "26200",
+               "architecture":  "64-bit"
+           },
+    "cpu":  {
+                "name":  "AMD Ryzen 5 5600G with Radeon Graphics",
+                "logical_processors":  12
+            },
+    "host_memory_bytes":  34201518080,
+    "workspace":  {
+                      "repo_root":  "\u003clocal-repository\u003e",
+                      "drive":  "C",
+                      "free_bytes":  199262081024,
+                      "used_bytes":  799913402368
+                  },
+    "python":  {
+                   "version":  "Python 3.12.10",
+                   "virtual_environment":  ".venv"
+               },
+    "nvidia_gpus":  [
+                        {
+                            "name":  "NVIDIA GeForce RTX 3080 Ti",
+                            "memory_mib":  12288,
+                            "driver_version":  "616.64"
+                        }
+                    ],
+    "pytorch":  {
+                    "installed":  false,
+                    "version":  null,
+                    "cuda_available":  false,
+                    "cuda_runtime":  null,
+                    "gpu_names":  [
+
+                                  ]
+                }
+}
