@@ -1,0 +1,8 @@
+# Q2/Q3 qualification runtime pins — 2026-09-07
+# PyTorch CUDA wheel is installed from the official cu126 index; see Q2_Q3_EXECUTION_RELEASE.md.
+torch==2.14.0
+transformers==5.16.1
+accelerate==1.14.0
+safetensors==0.8.0
+numpy==2.3.5
+scikit-learn==1.8.0
