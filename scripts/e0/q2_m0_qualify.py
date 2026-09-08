@@ -28,6 +28,7 @@ import hashlib
 import json
 import os
 import random
+import subprocess
 import time
 from pathlib import Path
 
@@ -267,9 +268,81 @@ def parameter_groups(model: torch.nn.Module, wd_scope: str) -> list[dict]:
     raise ValueError(f"unknown wd scope {wd_scope}")
 
 
+def scientific_setup(
+    candidate: str,
+    wd_scope: str,
+    seed: int,
+    data_root: Path,
+    repo_root: Path,
+) -> dict:
+    """Shared scientific pre-training setup (Q2_C0_INFRASTRUCTURE_RETRY_RELEASE.md).
+
+    Both the full --candidate qualification path and --preflight traverse this
+    exact function, in this order:
+      1. reject non-authoritative --wd-scope all;
+      2. enable deterministic algorithms, disable TF32;
+      3. require CUDA;
+      4. re-hash all four frozen Q1 inputs (P1);
+      5. assemble lineage: Git HEAD, clean-tree-at-start, frozen input digests,
+         runtime snapshot digest (P3);
+      6. load train_ID / eval_ID / eval_STRUCT with no truncation;
+      7. construct the requested M0 candidate at the requested frozen seed;
+      8. construct AdamW with the frozen exclude_norm_bias parameter groups.
+    """
+    if wd_scope == "all":
+        raise SystemExit(
+            "Scientific Q2 execution forbids --wd-scope all "
+            "(frozen Decision-22 parameter-group semantics)."
+        )
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    device = torch.device("cuda")
+    if not torch.cuda.is_available():
+        raise SystemExit("CUDA unavailable — frozen Q2 contract requires CUDA.")
+    data_root = data_root.resolve()
+    verified_digests = verify_q1_inputs(data_root)
+    runtime_snapshot_path = repo_root / "docs" / "experiments" / "e0" / "q2_q3_runtime.snapshot.json"
+    lineage = {
+        "code_git_commit": subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=repo_root,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip(),
+        "working_tree_clean_at_start": subprocess.run(
+            ["git", "status", "--porcelain"], cwd=repo_root,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == "",
+        "verified_q1_input_digests": verified_digests,
+        "runtime_snapshot_sha256": sha256_file(runtime_snapshot_path),
+    }
+    print(f"P1 verified frozen Q1 input digests under {data_root}", flush=True)
+    train_rows, _ = load_split(data_root, "train_ID")
+    eval_id_rows, _ = load_split(data_root, "eval_ID")
+    eval_struct_rows, _ = load_split(data_root, "eval_STRUCT")
+    model = build_model(candidate, seed, device)
+    optimizer = torch.optim.AdamW(
+        parameter_groups(model, wd_scope),
+        lr=PEAK_LR,
+        betas=BETAS,
+        eps=ADAM_EPS,
+    )
+    return {
+        "device": device,
+        "verified_digests": verified_digests,
+        "lineage": lineage,
+        "train_rows": train_rows,
+        "eval_id_rows": eval_id_rows,
+        "eval_struct_rows": eval_struct_rows,
+        "model": model,
+        "optimizer": optimizer,
+    }
+
+
 def run_training(
     candidate: str,
     seed: int,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
     train_rows: list[dict],
     eval_id_rows: list[dict],
     eval_struct_rows: list[dict],
@@ -284,13 +357,6 @@ def run_training(
     np.random.seed(seed % (2**32))
     random.seed(seed)
 
-    model = build_model(candidate, seed, device)
-    optimizer = torch.optim.AdamW(
-        parameter_groups(model, wd_scope),
-        lr=PEAK_LR,
-        betas=BETAS,
-        eps=ADAM_EPS,
-    )
     stream = TrainStream(len(train_rows), seed)
     torch.cuda.reset_peak_memory_stats(device)
 
@@ -618,6 +684,17 @@ def main() -> None:
         action="store_true",
         help="non-scientific: 16-update C0 run exercising the full training/eval/checkpoint path",
     )
+    parser.add_argument(
+        "--preflight",
+        action="store_true",
+        help="non-scientific: rehearse the exact scientific setup branch plus one disposable step",
+    )
+    parser.add_argument(
+        "--preflight-seed",
+        type=int,
+        default=None,
+        help="diagnostic override; defaults to the first frozen seed 1647674144",
+    )
     parser.add_argument("--candidate", choices=list(CANDIDATES))
     parser.add_argument(
         "--wd-scope",
@@ -648,13 +725,19 @@ def main() -> None:
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cudnn.allow_tf32 = False
         device = torch.device("cuda")
+        if not torch.cuda.is_available():
+            raise SystemExit("CUDA unavailable.")
         data_root = args.data_root.resolve()
         train_rows, _ = load_split(data_root, "train_ID")
         eval_id_rows, _ = load_split(data_root, "eval_ID")
         eval_struct_rows, _ = load_split(data_root, "eval_STRUCT")
+        model = build_model("C0", 0, device)
+        optimizer = torch.optim.AdamW(
+            parameter_groups(model, args.wd_scope), lr=PEAK_LR, betas=BETAS, eps=ADAM_EPS,
+        )
         out_dir = args.out_root.resolve() / "SMOKE_TRAIN" / "seed_0"
         result = run_training(
-            "C0", 0, train_rows, eval_id_rows, eval_struct_rows,
+            "C0", 0, model, optimizer, train_rows, eval_id_rows, eval_struct_rows,
             device, args.wd_scope, out_dir, updates=16, eval_every=8,
         )
         result["non_scientific"] = True
@@ -664,50 +747,98 @@ def main() -> None:
         print(json.dumps({k: result[k] for k in ["candidate", "updates", "selected_update", "Q", "Q_ID", "Q_STRUCT", "wall_seconds"]}, indent=2))
         raise SystemExit(0)
 
-    if not args.candidate:
-        parser.error("provide --candidate or --smoke")
+    if not args.candidate and not args.preflight:
+        parser.error("provide --candidate, --preflight, --smoke, or --smoke-train")
+
+    if args.preflight:
+        # Q2_C0_INFRASTRUCTURE_RETRY_RELEASE.md: rehearse the exact scientific
+        # setup branch (shared scientific_setup) plus one disposable guarded
+        # step. Emits NO scientific result.json/best.pt/summary — only the
+        # non-scientific preflight manifest.
+        candidate = args.candidate or "C0"
+        seed = args.preflight_seed if args.preflight_seed is not None else FROZEN_SEEDS[0]
+        ctx = scientific_setup(candidate, args.wd_scope, seed, args.data_root, repo_root)
+        device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+        torch.cuda.reset_peak_memory_stats(device)
+        rows = [
+            ctx["train_rows"][i]
+            for i in TrainStream(len(ctx["train_rows"]), seed).take(MICROBATCH)
+        ]
+        ids, decide, labels = collate(rows, device)
+        logits = model(ids, decide)
+        loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+        loss_finite = bool(torch.isfinite(loss).all())
+        loss.backward()
+        grads_finite = all(
+            bool(torch.isfinite(p.grad).all())
+            for p in model.parameters()
+            if p.grad is not None
+        )
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+        grad_norm_finite = bool(torch.isfinite(grad_norm).all())
+        optimizer.step()
+        params_finite = all(bool(torch.isfinite(p.data).all()) for p in model.parameters())
+        cuda_peak = int(torch.cuda.max_memory_allocated(device))
+        groups = parameter_groups(model, args.wd_scope)
+        decay_elems = sum(
+            p.numel() for g in groups if g["weight_decay"] > 0 for p in g["params"]
+        )
+        no_decay_elems = sum(
+            p.numel() for g in groups if g["weight_decay"] == 0 for p in g["params"]
+        )
+        checks_pass = loss_finite and grads_finite and grad_norm_finite and params_finite
+        parameter_count = sum(p.numel() for p in model.parameters())
+        # The preflight never constructs seed output dirs, checkpoints, result
+        # records, or the candidate summary; no scientific artifacts are
+        # produced by this process.
+        del model, optimizer
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+        manifest = {
+            "schema_id": "E0-Q2-SCIENTIFIC-PREFLIGHT-v0",
+            "non_scientific": True,
+            "candidate": candidate,
+            "seed": seed,
+            "code_git_commit": ctx["lineage"]["code_git_commit"],
+            "working_tree_clean_at_start": ctx["lineage"]["working_tree_clean_at_start"],
+            "verified_q1_input_digests": ctx["verified_digests"],
+            "runtime_snapshot_sha256": ctx["lineage"]["runtime_snapshot_sha256"],
+            "wd_scope": args.wd_scope,
+            "parameter_count": parameter_count,
+            "decay_parameter_count": decay_elems,
+            "no_decay_parameter_count": no_decay_elems,
+            "loss_finite": loss_finite,
+            "gradients_finite": grads_finite,
+            "grad_norm_finite": grad_norm_finite,
+            "parameters_finite_after_step": params_finite,
+            "cuda_peak_allocated_bytes": cuda_peak,
+            "microbatch_source": "TrainStream(<seed>).take(MICROBATCH) — identical to the scientific first microbatch",
+            "emits_scientific_artifacts": False,
+            "status": "PASS" if checks_pass else "FAIL",
+        }
+        out_path = repo_root / "docs" / "experiments" / "e0" / "q2_c0_scientific_preflight.json"
+        out_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
+        print(json.dumps(manifest, indent=2))
+        raise SystemExit(0 if manifest["status"] == "PASS" else 1)
 
     if args.wd_scope == "all":
         # R1 (Q2_FULL_RUN_RELEASE.md): scientific Q2 must use exclude_norm_bias.
+        # (scientific_setup enforces this too; fail before touching anything.)
         raise SystemExit(
             "Scientific Q2 execution forbids --wd-scope all "
             "(frozen Decision-22 parameter-group semantics)."
         )
 
-    torch.use_deterministic_algorithms(True)
-    torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32 = False
-    device = torch.device("cuda")
-    if not torch.cuda.is_available():
-        raise SystemExit("CUDA unavailable — frozen Q2 contract requires CUDA.")
-
-    data_root = args.data_root.resolve()
-    # P1: re-verify every frozen Q1 input before model construction.
-    verified_digests = verify_q1_inputs(data_root)
-    runtime_snapshot_path = repo_root / "docs" / "experiments" / "e0" / "q2_q3_runtime.snapshot.json"
-    lineage = {
-        "code_git_commit": subprocess_git_head(repo_root),
-        "working_tree_clean_at_start": subprocess.run(
-            ["git", "status", "--porcelain"], cwd=repo_root,
-            capture_output=True, text=True, check=True,
-        ).stdout.strip() == "",
-        "verified_q1_input_digests": verified_digests,
-        "runtime_snapshot_sha256": sha256_file(runtime_snapshot_path),
-    }
-    print(f"P1 verified frozen Q1 input digests under {data_root}", flush=True)
-
-    train_rows, _ = load_split(data_root, "train_ID")
-    eval_id_rows, _ = load_split(data_root, "eval_ID")
-    eval_struct_rows, _ = load_split(data_root, "eval_STRUCT")
-
     results = []
     try:
         for seed in FROZEN_SEEDS:
+            ctx = scientific_setup(args.candidate, args.wd_scope, seed, args.data_root, repo_root)
             out_dir = args.out_root.resolve() / args.candidate / f"seed_{seed}"
             results.append(
                 run_training(
-                    args.candidate, seed, train_rows, eval_id_rows, eval_struct_rows,
-                    device, args.wd_scope, out_dir, lineage=lineage,
+                    args.candidate, seed, ctx["model"], ctx["optimizer"],
+                    ctx["train_rows"], ctx["eval_id_rows"], ctx["eval_struct_rows"],
+                    ctx["device"], args.wd_scope, out_dir, lineage=ctx["lineage"],
                 )
             )
     except Q2DivergenceError as exc:

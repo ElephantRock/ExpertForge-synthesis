@@ -1,5 +1,9 @@
 # E0 Windows Local Bootstrap Status
 
+## C0 launch incident 001 — INFRASTRUCTURE_INVALID_PRE_MODEL (closed by remediation)
+
+The first C0 launch attempt from `48b2597f...` crashed pre-model with `NameError: subprocess` in the scientific lineage block; zero seeds, updates, checkpoints, or results were produced. Preserved logs are bound by SHA-256 in `q2_c0_launch_incident_001.json`. Remediation per `Q2_C0_INFRASTRUCTURE_RETRY_RELEASE.md`: module-level `import subprocess`, shared `scientific_setup()` used by both the full `--candidate` path and the new non-scientific `--preflight` rehearsal of the exact scientific setup branch, plus `q2_c0_scientific_preflight.json` evidence. C0 retry is HELD until Commits C and D validate on GitHub.
+
 - Q1 local reproduction: **PASS** — all four frozen corpus hashes matched; pushed as `eca842fad54a52db638dd913189ef9ada1dc69a6` and verified on GitHub (issue #1 comment, 2026-09-07T20:14:09Z).
 - Q2/Q3 pinned runtime: **INSTALLED** — torch 2.14.0+cu126, transformers 5.16.1, accelerate 1.14.0, safetensors 0.8.0, numpy 2.3.5, scikit-learn 1.8.0. CUDA 12.6 available; BF16 supported (RTX 3080 Ti, 12 GiB). See `q2_q3_runtime.snapshot.json`.
 - Q2 harness (`m0_model.py`, `q2_m0_qualify.py`): **IMPLEMENTED, SMOKE PASS** — exact frozen parameter counts (C0/C1/C2), init audit, bit-exact repeatable forward/backward/step, deterministic data order, LR endpoints, metric sanity. See `q2_smoke_manifest.json`.
