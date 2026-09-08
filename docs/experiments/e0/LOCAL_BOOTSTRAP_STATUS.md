@@ -15,4 +15,10 @@ Interpretation questions — **RESOLVED by project authority** in `Q2_FULL_RUN_R
 3. **R3 — Q3 answer context: exact leading-space continuations `" A"/" B"/" C"`, no trailing newline, no fallback forms.** Fallback removed; all three Q3 smokes rerun: PASS.
 4. **R4 — replay subset: approved as implemented** — 20 per label×depth cell by ascending `sha256("ExpertForge-E0-Q3|replay|<sample_id>")`. Frozen.
 
-Correction checkpoint status: the two narrow corrections (R1 enforcement, R3 fallback removal) are in this commit; all smoke manifests regenerated under the corrected rules and PASS. Full 8,000-update Q2 runs were **not** started from `f5d5a88`; C0 is authorized to begin from this checkpoint after GitHub-side validation.
+Prelaunch integrity audit (P1–P4, `Q2_PRELAUNCH_INTEGRITY_AUDIT.md`): **CLOSED.**
+- P1: scientific Q2 re-hashes all four frozen Q1 inputs at startup and fails closed before model construction. Verified locally: a tampered `train_ID.jsonl` aborts with the digest mismatch, exit 1.
+- P2: scientific runs fail closed on non-finite microbatch loss, accumulated gradients, global grad norm, post-step parameters, and eval logits/metrics; `scientific_failure.json` records candidate/seed/update/failure code/code SHA/verified digests/last finite checkpoint. Verified locally: injected NaN produces `nonfinite_microbatch_loss` and emits **no** result.json or best.pt — an earlier checkpoint cannot rescue a diverged run.
+- P3: stale `wd_scope_default` metadata replaced by `wd_scope: exclude_norm_bias (frozen Decision-22 / R1)`; scientific seed results record `code_git_commit`, `working_tree_clean_at_start`, `verified_q1_input_digests`, `runtime_snapshot_sha256`, preserved into the candidate summary.
+- P4: two-commit evidence protocol — code-fix commit `35c6a8f21169202dbc297fa5908f5f09d6c7d39c` first; all smoke manifests in this commit were regenerated from that clean revision and record `git_commit = 35c6a8f...` (Q2 smoke PASS, Q3 S0C0/S0C1/S0C2 PASS, 16-update non-scientific path PASS under `exclude_norm_bias`).
+
+C0 full Q2 qualification (three frozen seeds × 8,000 updates) is released once this evidence-refresh commit is validated on GitHub, per the audit's release condition.

@@ -1,6 +1,6 @@
 {
   "schema_id": "E0-Q3-SMOKE-v0",
-  "git_commit": "1070a61c4f48cef4d02bc6ac6305c31fe09b4117",
+  "git_commit": "35c6a8f21169202dbc297fa5908f5f09d6c7d39c",
   "non_scientific": true,
   "tokenizer_checks": {
     "S0C0": {
@@ -109,7 +109,7 @@
       },
       "resource_feasible": true,
       "resource_ceiling_notes": [],
-      "host_peak_memory_bytes": 4311126016,
+      "host_peak_memory_bytes": 4310454272,
       "abc": {
         "answer_form": " <L>",
         "token_ids": {
