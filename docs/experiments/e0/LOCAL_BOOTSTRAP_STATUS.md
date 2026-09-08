@@ -1,5 +1,10 @@
 # E0 Windows Local Bootstrap Status
 
+## C0 full Q2 qualification — COMPLETE (evidence pushed; ladder decision held for project authority)
+
+All three frozen seeds (1647674144, 1110194409, 335767543) completed 8,000 updates each under `exclude_norm_bias` from launch head `7556f756146e59940ada037385c81fdf5325bc1e` (clean tree verified at start; identical runtime snapshot binding across seeds; frozen Q1 digests re-verified at each seed's setup; no `scientific_failure.json`; each `best_checkpoint_sha256` matches its local `best.pt`, which remains uncommitted under gitignored `local_data/`). Harness-emitted gate decision: **`BELOW_FLOOR_NEXT_CANDIDATE_OR_UNQUALIFIED`** (median Q = 0.333333; all three seeds at chance). Evidence: `q2_c0_evidence/seed_*_result.json` (byte-identical copies of the local source records) and `q2_m0_qualification_summary.json`. No ladder inference is made locally; C1 is **not started** — the project authority recomputes the frozen Decision-6 gate from the pushed records.
+
+
 ## C0 launch incident 001 — INFRASTRUCTURE_INVALID_PRE_MODEL (closed by remediation)
 
 The first C0 launch attempt from `48b2597f...` crashed pre-model with `NameError: subprocess` in the scientific lineage block; zero seeds, updates, checkpoints, or results were produced. Preserved logs are bound by SHA-256 in `q2_c0_launch_incident_001.json`. Remediation per `Q2_C0_INFRASTRUCTURE_RETRY_RELEASE.md`: module-level `import subprocess`, shared `scientific_setup()` used by both the full `--candidate` path and the new non-scientific `--preflight` rehearsal of the exact scientific setup branch, plus `q2_c0_scientific_preflight.json` evidence. C0 retry is HELD until Commits C and D validate on GitHub.
