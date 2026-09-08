@@ -1,5 +1,10 @@
 # E0 Windows Local Bootstrap Status
 
+## C1 full Q2 qualification — COMPLETE (evidence pushed; ladder decision held for project authority)
+
+All three frozen seeds completed 8,000 updates each under `exclude_norm_bias` from launch head `226b670a9fe59f94395a3db995c67a1a2e2145c2` (clean tree at start; identical runtime snapshot binding across seeds; frozen Q1 digests re-verified per seed; no `scientific_failure.json`; each `best_checkpoint_sha256` matches its local uncommitted `best.pt`; parameter count 63,459,331 verified). Per-seed Q: 0.333333 / 0.333333 / 0.333333. Harness-emitted gate decision: **`BELOW_FLOOR_NEXT_CANDIDATE_OR_UNQUALIFIED`**. Evidence: `q2_c1_evidence/seed_*_result.json` (byte-identical copies) and the updated `q2_m0_qualification_summary.json` (C0 section preserved). No ladder inference locally; **C2 is NOT started** — the project authority recomputes the C1 gate. Per the frozen ladder, C2 is the final candidate; if it also remains below floor, Q2 is UNQUALIFIED and no C3 may be invented.
+
+
 ## C0 full Q2 qualification — COMPLETE (evidence pushed; ladder decision held for project authority)
 
 All three frozen seeds (1647674144, 1110194409, 335767543) completed 8,000 updates each under `exclude_norm_bias` from launch head `7556f756146e59940ada037385c81fdf5325bc1e` (clean tree verified at start; identical runtime snapshot binding across seeds; frozen Q1 digests re-verified at each seed's setup; no `scientific_failure.json`; each `best_checkpoint_sha256` matches its local `best.pt`, which remains uncommitted under gitignored `local_data/`). Harness-emitted gate decision: **`BELOW_FLOOR_NEXT_CANDIDATE_OR_UNQUALIFIED`** (median Q = 0.333333; all three seeds at chance). Evidence: `q2_c0_evidence/seed_*_result.json` (byte-identical copies of the local source records) and `q2_m0_qualification_summary.json`. No ladder inference is made locally; C1 is **not started** — the project authority recomputes the frozen Decision-6 gate from the pushed records.
