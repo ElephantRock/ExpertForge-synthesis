@@ -68,6 +68,26 @@ GATE = {
     "seed_Q_max": 0.75,
 }
 
+# P1 (Q2_PRELAUNCH_INTEGRITY_AUDIT.md): frozen Q1 input digests, identical to
+# the exact local reproduction record in q1_local_reproduction.json. Scientific
+# Q2 must re-verify these at startup and fail closed before model construction.
+FROZEN_Q1_INPUT_DIGESTS = {
+    "train_ID.jsonl": "79daa2c007bc914e228a0312d8278b8f5ca7cb2c28f1450d508f9924362aacf1",
+    "eval_ID.jsonl": "b66b6629173449f71022fba0e7907826733aa7ae28e0b7502716ba4fdd45fce8",
+    "eval_STRUCT.jsonl": "688865d27b8e1fd208b2b453670306d1b4ecc9ff9a21130a297e67cc4b07c7d8",
+    "CMDR-Lex-v1.json": "c3d44e7a99163456ef149fdd1b1caf2fd694e8412e6f082480cb05c2ef237471",
+}
+
+
+class Q2DivergenceError(RuntimeError):
+    """P2: scientific divergence (non-finite state) — fail closed, no rescue."""
+
+    def __init__(self, code: str, update: int, detail: str | None = None) -> None:
+        super().__init__(f"{code} at update {update}" + (f" ({detail})" if detail else ""))
+        self.code = code
+        self.update = update
+        self.detail = detail
+
 
 def cjson(obj: object) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
@@ -75,6 +95,27 @@ def cjson(obj: object) -> str:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify_q1_inputs(data_root: Path) -> dict[str, str]:
+    """P1: re-hash every frozen Q1 input; fail closed on missing/mismatch."""
+    verified: dict[str, str] = {}
+    for name, expected in FROZEN_Q1_INPUT_DIGESTS.items():
+        path = data_root / name
+        if not path.is_file():
+            raise SystemExit(f"P1 fail-closed: frozen Q1 input missing: {path}")
+        actual = sha256_file(path)
+        if actual != expected:
+            raise SystemExit(
+                f"P1 fail-closed: {name} sha256 {actual} != frozen {expected}"
+            )
+        verified[name] = actual
+    return verified
+
+
+def _require_finite(tensor: torch.Tensor, code: str, update: int) -> None:
+    if not bool(torch.isfinite(tensor).all()):
+        raise Q2DivergenceError(code, update)
 
 
 def perm_seed(seed: int, epoch: int) -> int:
@@ -179,22 +220,23 @@ def macro_cell_accuracy_depths(
 
 
 @torch.no_grad()
-def predict(model: torch.nn.Module, rows: list[dict], device: torch.device) -> np.ndarray:
+def predict(model: torch.nn.Module, rows: list[dict], device: torch.device, update: int | None = None) -> np.ndarray:
     model.eval()
     preds = []
     for start in range(0, len(rows), EVAL_BATCH):
         batch = rows[start : start + EVAL_BATCH]
         ids, decide, _ = collate(batch, device)
         logits = model(ids, decide)
+        _require_finite(logits, "nonfinite_eval_logits", update or -1)
         preds.extend(logits.argmax(dim=-1).cpu().tolist())
     model.train()
     return np.asarray(preds, dtype=np.int64)
 
 
-def evaluate(model: torch.nn.Module, rows: list[dict], device: torch.device) -> dict:
+def evaluate(model: torch.nn.Module, rows: list[dict], device: torch.device, update: int | None = None) -> dict:
     y_true = np.asarray([r["label_id"] for r in rows], dtype=np.int64)
     depths = np.asarray([r["depth"] for r in rows], dtype=np.int64)
-    y_pred = predict(model, rows, device)
+    y_pred = predict(model, rows, device, update)
     return {
         "cmdr_sma": macro_cell_accuracy(y_true, y_pred, depths),
         "sma_depth_2_4": macro_cell_accuracy_depths(y_true, y_pred, depths, (2, 3, 4)),
@@ -236,6 +278,7 @@ def run_training(
     out_dir: Path,
     updates: int = UPDATES,
     eval_every: int = EVAL_EVERY,
+    lineage: dict | None = None,
 ) -> dict:
     torch.manual_seed(seed)
     np.random.seed(seed % (2**32))
@@ -253,32 +296,63 @@ def run_training(
 
     best = {"update": 0, "sma": float("-inf"), "state": None}
     eval_history = []
+    last_finite_eval_update: int | None = None
     started = time.time()
-    for update in range(1, updates + 1):
-        lr = learning_rate(update)
-        for group in optimizer.param_groups:
-            group["lr"] = lr
-        batch_indices = stream.take(EFFECTIVE_BATCH)
-        optimizer.zero_grad(set_to_none=True)
-        for micro in range(GRAD_ACCUM):
-            rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
-            ids, decide, labels = collate(rows, device)
-            logits = model(ids, decide)
-            loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
-            (loss / GRAD_ACCUM).backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
-        optimizer.step()
+    try:
+        for update in range(1, updates + 1):
+            lr = learning_rate(update)
+            for group in optimizer.param_groups:
+                group["lr"] = lr
+            batch_indices = stream.take(EFFECTIVE_BATCH)
+            optimizer.zero_grad(set_to_none=True)
+            for micro in range(GRAD_ACCUM):
+                rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+                ids, decide, labels = collate(rows, device)
+                logits = model(ids, decide)
+                loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+                _require_finite(loss, "nonfinite_microbatch_loss", update)
+                (loss / GRAD_ACCUM).backward()
+            for param in model.parameters():
+                if param.grad is not None:
+                    _require_finite(param.grad, "nonfinite_accumulated_gradient", update)
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            _require_finite(grad_norm, "nonfinite_grad_norm", update)
+            optimizer.step()
+            for param in model.parameters():
+                _require_finite(param.data, "nonfinite_parameters_after_step", update)
 
-        if update % eval_every == 0:
-            sma = evaluate(model, eval_id_rows, device)["cmdr_sma"]
-            eval_history.append({"update": update, "eval_ID_cmdr_sma": sma, "lr": lr})
-            if sma > best["sma"]:
-                best = {
-                    "update": update,
-                    "sma": sma,
-                    "state": {k: v.detach().cpu().clone() for k, v in model.state_dict().items()},
-}
-            print(f"[{candidate} seed={seed}] update {update}/{updates} eval_ID SMA={sma:.6f} lr={lr:.3e}", flush=True)
+            if update % eval_every == 0:
+                sma = evaluate(model, eval_id_rows, device, update)["cmdr_sma"]
+                if not np.isfinite(sma):
+                    raise Q2DivergenceError("nonfinite_eval_metric", update)
+                eval_history.append({"update": update, "eval_ID_cmdr_sma": sma, "lr": lr})
+                last_finite_eval_update = update
+                if sma > best["sma"]:
+                    best = {
+                        "update": update,
+                        "sma": sma,
+                        "state": {k: v.detach().cpu().clone() for k, v in model.state_dict().items()},
+                    }
+                print(f"[{candidate} seed={seed}] update {update}/{updates} eval_ID SMA={sma:.6f} lr={lr:.3e}", flush=True)
+    except Q2DivergenceError as exc:
+        # P2: divergence cannot be rescued by an earlier checkpoint. Write the
+        # machine-readable failure record and re-raise; no normal seed result.
+        out_dir.mkdir(parents=True, exist_ok=True)
+        failure = {
+            "schema_id": "E0-Q2-M0-SCIENTIFIC-FAILURE-v0",
+            "candidate": candidate,
+            "seed": seed,
+            "update": exc.update,
+            "failure_code": exc.code,
+            "detail": exc.detail,
+            "last_finite_checkpoint_update": last_finite_eval_update,
+            "non_scientific": seed not in FROZEN_SEEDS,
+            **(lineage or {}),
+        }
+        (out_dir / "scientific_failure.json").write_text(
+            json.dumps(failure, indent=2) + "\n", encoding="utf-8", newline="\n"
+        )
+        raise
 
     model.load_state_dict(best["state"])
     model.to(device)
@@ -318,6 +392,7 @@ def run_training(
         "updates": updates,
         "eval_every": eval_every,
         "wd_scope": wd_scope,
+        **(lineage or {}),
         "param_count": CANDIDATES[candidate]["params"],
         "selected_update": best["update"],
         "selected_eval_ID_cmdr_sma": best["sma"],
@@ -383,10 +458,10 @@ def write_summary(candidate: str, results: list[dict], gate: dict, repo_root: Pa
         {
             "schema_id": "E0-Q2-M0-QUALIFICATION-SUMMARY-v0",
             "candidates": summary.get("candidates", {}),
-            "execution_notes": {
-                "wd_scope_default": "all (literal contract reading; flagged for authority)",
-                "permutation_seed_rule": "sha256('ExpertForge-E0-Q2|M0|perm|<seed>|<epoch>')[:8] big-endian",
-            },
+        "execution_notes": {
+            "wd_scope": "exclude_norm_bias (frozen Decision-22 / R1)",
+            "permutation_seed_rule": "sha256('ExpertForge-E0-Q2|M0|perm|<seed>|<epoch>')[:8] big-endian, zero-based epochs",
+        },
         }
     )
     summary["candidates"][candidate] = {
@@ -607,19 +682,37 @@ def main() -> None:
         raise SystemExit("CUDA unavailable — frozen Q2 contract requires CUDA.")
 
     data_root = args.data_root.resolve()
+    # P1: re-verify every frozen Q1 input before model construction.
+    verified_digests = verify_q1_inputs(data_root)
+    runtime_snapshot_path = repo_root / "docs" / "experiments" / "e0" / "q2_q3_runtime.snapshot.json"
+    lineage = {
+        "code_git_commit": subprocess_git_head(repo_root),
+        "working_tree_clean_at_start": subprocess.run(
+            ["git", "status", "--porcelain"], cwd=repo_root,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == "",
+        "verified_q1_input_digests": verified_digests,
+        "runtime_snapshot_sha256": sha256_file(runtime_snapshot_path),
+    }
+    print(f"P1 verified frozen Q1 input digests under {data_root}", flush=True)
+
     train_rows, _ = load_split(data_root, "train_ID")
     eval_id_rows, _ = load_split(data_root, "eval_ID")
     eval_struct_rows, _ = load_split(data_root, "eval_STRUCT")
 
     results = []
-    for seed in FROZEN_SEEDS:
-        out_dir = args.out_root.resolve() / args.candidate / f"seed_{seed}"
-        results.append(
-            run_training(
-                args.candidate, seed, train_rows, eval_id_rows, eval_struct_rows,
-                device, args.wd_scope, out_dir,
+    try:
+        for seed in FROZEN_SEEDS:
+            out_dir = args.out_root.resolve() / args.candidate / f"seed_{seed}"
+            results.append(
+                run_training(
+                    args.candidate, seed, train_rows, eval_id_rows, eval_struct_rows,
+                    device, args.wd_scope, out_dir, lineage=lineage,
+                )
             )
-        )
+    except Q2DivergenceError as exc:
+        print(f"P2 fail-closed: {exc}", flush=True)
+        raise SystemExit(2) from exc
     gate = evaluate_candidate_gate(results)
     write_summary(args.candidate, results, gate, repo_root)
     print(json.dumps(gate, indent=2))
