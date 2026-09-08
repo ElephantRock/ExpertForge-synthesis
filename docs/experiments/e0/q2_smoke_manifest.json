@@ -1,6 +1,6 @@
 {
   "schema_id": "E0-Q2-SMOKE-v0",
-  "git_commit": "35c6a8f21169202dbc297fa5908f5f09d6c7d39c",
+  "git_commit": "7d0ebd9ec437c4d86c962faba021ffb3b63a00b4",
   "device": "cuda",
   "torch_version": "2.14.0+cu126",
   "checks": {

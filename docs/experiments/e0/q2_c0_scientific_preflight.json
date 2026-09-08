@@ -1,0 +1,27 @@
+{
+  "schema_id": "E0-Q2-SCIENTIFIC-PREFLIGHT-v0",
+  "non_scientific": true,
+  "candidate": "C0",
+  "seed": 1647674144,
+  "code_git_commit": "7d0ebd9ec437c4d86c962faba021ffb3b63a00b4",
+  "working_tree_clean_at_start": true,
+  "verified_q1_input_digests": {
+    "train_ID.jsonl": "79daa2c007bc914e228a0312d8278b8f5ca7cb2c28f1450d508f9924362aacf1",
+    "eval_ID.jsonl": "b66b6629173449f71022fba0e7907826733aa7ae28e0b7502716ba4fdd45fce8",
+    "eval_STRUCT.jsonl": "688865d27b8e1fd208b2b453670306d1b4ecc9ff9a21130a297e67cc4b07c7d8",
+    "CMDR-Lex-v1.json": "c3d44e7a99163456ef149fdd1b1caf2fd694e8412e6f082480cb05c2ef237471"
+  },
+  "runtime_snapshot_sha256": "238a881ae5e30d464b8fed7858232b81357af9a9634bac5ad6257474072cb556",
+  "wd_scope": "exclude_norm_bias",
+  "parameter_count": 53232643,
+  "decay_parameter_count": 53216768,
+  "no_decay_parameter_count": 15875,
+  "loss_finite": true,
+  "gradients_finite": true,
+  "grad_norm_finite": true,
+  "parameters_finite_after_step": true,
+  "cuda_peak_allocated_bytes": 2077827072,
+  "microbatch_source": "TrainStream(<seed>).take(MICROBATCH) \u2014 identical to the scientific first microbatch",
+  "emits_scientific_artifacts": false,
+  "status": "PASS"
+}
