@@ -1,5 +1,14 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-B2 matched-permutation family-disjoint control — COMPLETE: `COLOCATION_CAUSES_ENGAGEMENT_CONFIRMED` (two-commit lineage: code `95dbeaa` → evidence below)
+
+Single LB-MP arm (2,000 updates, full 24k corpus) from clean Commit K (`95dbeaa5b81d048cf71a081402af35cf51ebc3b2`; `parameter_count = 53,232,643`, clean tree at start, frozen Q1 digests, runtime digest, full lineage in `diagnostics/d4b2_matched_permutation_control.json`). LB-MP derives its family permutation from the **exact FC namespace/seed/epoch rule** and fills E/C/U slots at offsets 0/2667/5334 — removing co-location while holding the family presentation permutation, label sequence, and 43/43/42 balance identical to FC. The fail-closed pre-training verification passed every check: permutation digests identical to FC across all 12 epochs consumed, E-slot family k = FC family k for all k, epoch coverage exact, label sequence identical across all 2,000 batches, and **max family multiplicity 1 in every batch including all epoch-boundary crossings** (zero violations; pre-verified deterministically for this exact horizon).
+
+**Result: LB-MP stays pinned at the uniform floor** — train CE 1.108 → 1.1005 (ln 3) at every probe, train SMA flat (0.3332), eval_ID 0.334 / eval_STRUCT 0.337 (chance), unseen-family alignment −0.003. Against the D4-B FC reference (train CE 0.761, train SMA 0.669), the permutation-order confound is ruled out: with the FC permutation held exactly constant, removing family co-location alone removes the optimization engagement.
+
+**Per issue #3's D4-B2 table: `COLOCATION_CAUSES_ENGAGEMENT_CONFIRMED`** — the co-location mechanism is now causally isolated rather than merely correlated. The 8,000-update FC extension becomes eligible upon project-authority review of this checkpoint. D4-C and all other factors remain **held**.
+
+
 ## D4-B label-balanced family-disjoint decomposition — COMPLETE: `COLOCATION_CAUSES_ENGAGEMENT` (two-commit lineage: code `b1d33d3` → evidence below)
 
 Paired 2,000-update FC/LB arms on the full 24k corpus from clean Commit I (`b1d33d30ac35f7e3f12dee9018392618d3949475`; `parameter_count = 53,232,643`, clean tree at start, frozen Q1 digests, runtime digest, family-stream config digest `3a65c503...`, eval-probe family digest identical to D4-A's `2288b187...`, per-arm wall time FC 28.3 min / LB 26.5 min). LB was verified pre-run to have the **identical global E/C/U label sequence and identical 43/43/42 per-128 balance cycle as FC** (max family multiplicity 1 per batch vs FC's 3; every example consumed exactly once per epoch). Per-probe metrics now include **full train_ID surfaces** (all in `diagnostics/d4b_label_balanced_disjoint.json`):
