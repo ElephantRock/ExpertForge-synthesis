@@ -1,5 +1,15 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-B label-balanced family-disjoint decomposition — COMPLETE: `COLOCATION_CAUSES_ENGAGEMENT` (two-commit lineage: code `b1d33d3` → evidence below)
+
+Paired 2,000-update FC/LB arms on the full 24k corpus from clean Commit I (`b1d33d30ac35f7e3f12dee9018392618d3949475`; `parameter_count = 53,232,643`, clean tree at start, frozen Q1 digests, runtime digest, family-stream config digest `3a65c503...`, eval-probe family digest identical to D4-A's `2288b187...`, per-arm wall time FC 28.3 min / LB 26.5 min). LB was verified pre-run to have the **identical global E/C/U label sequence and identical 43/43/42 per-128 balance cycle as FC** (max family multiplicity 1 per batch vs FC's 3; every example consumed exactly once per epoch). Per-probe metrics now include **full train_ID surfaces** (all in `diagnostics/d4b_label_balanced_disjoint.json`):
+
+- **FC: engaged and fitting the training families** — train SMA 0.3335 → **0.6694**, train CE 1.358 → **0.761**, mixed train histogram [7046, 10544, 6410]; eval_ID 0.332 / eval_STRUCT 0.331 remain chance; unseen-family alignment stays at baseline (0.0294). FC scalar-reproduces the D4-A FC arm at all six probes.
+- **LB: not engaged** — train SMA flat (0.3343), train CE pinned at ln(3) ≈ 1.099–1.109 through T2000, near-constant train histogram [720, 6535, 16745]; eval chance; unseen-family alignment 0.0107.
+
+**Per issue #3's D4-B decision table: `COLOCATION_CAUSES_ENGAGEMENT`** — with label sequence and per-batch balance held exactly constant, removing family co-location alone removes the optimization engagement FC showed. Label balance/order does not explain the D4-A CE reduction; local counterfactual-family co-presence is the operative factor. FC nevertheless still transfers nothing within 2,000 updates (eval and unseen-family geometry unchanged), so the 8,000-update FC extension question — whether co-location-driven train fitting eventually generalizes — remains open and is the project authority's call. All other D4 factors, Q3, corpus generation, and new qualification runs remain **held**.
+
+
 ## D4-A family-coherent batching falsifier — COMPLETE: `BOTH_REMAIN_CHANCE` (two-commit lineage: code `37f632f` → evidence below)
 
 Paired 2,000-update C0 arms on the full 24k corpus from clean Commit G (`37f632f8abe9acc828fc60c57582c7db71ed1d67`; `parameter_count = 53,232,643`, clean tree at start, frozen Q1 digests, runtime digest, family-stream config digest, eval-probe family digest, per-arm wall time all recorded in `diagnostics/d4a_family_coherent_batching.json`):
