@@ -1,5 +1,16 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-A family-coherent batching falsifier — COMPLETE: `BOTH_REMAIN_CHANCE` (two-commit lineage: code `37f632f` → evidence below)
+
+Paired 2,000-update C0 arms on the full 24k corpus from clean Commit G (`37f632f8abe9acc828fc60c57582c7db71ed1d67`; `parameter_count = 53,232,643`, clean tree at start, frozen Q1 digests, runtime digest, family-stream config digest, eval-probe family digest, per-arm wall time all recorded in `diagnostics/d4a_family_coherent_batching.json`):
+
+- **R (production example-level stream): eval_ID SMA = 0.333333 at every probe** (T0–T2000), eval_STRUCT 0.333333, constant-label histograms, min-recall 0 — and **bit-matches the production C0 seed-1647674144 eval history at all five probe updates**, the strongest internal control available (same code, same trajectory, repaired provenance).
+- **FC (family-unit stream, E/C/U contiguous, 42 complete families + 2-example fragment per 128-batch): eval_ID SMA = 0.3320 at T2000** (dips to 0.327–0.330 are noise), eval_STRUCT 0.3308 — chance, though with mixed prediction histograms and nonzero min-recall 0.2325.
+- **The mechanism was engaged but did not transfer:** FC's batch CE falls monotonically 1.119 → 1.101 → 1.053 → 0.919 → **0.864** (clearly below the ln(3)=1.0986 uniform floor that R never leaves), while unseen-family E−C displacement alignment stays at its T0 baseline (R: 0.0017, FC: 0.0294 vs T0 −0.004).
+
+**Per issue #3's decision table: family co-location is insufficient — stop before changing another factor.** The nuance for the record: within the 2,000-update horizon, family-coherent batching does materially change the optimization (loss escapes the uniform floor; predictions de-degenerate) yet produces zero generalization to unseen families or eval surfaces. Whether a longer FC horizon would eventually generalize is untested and is the authority's call; the falsifier as specified is answered. All other D4 factors, Q3, corpus generation, and new qualification runs remain **held**.
+
+
 ## D3 representation probe — COMPLETE: `TRAIN_ALIGNED_HOLDOUT_CHANCE` (two-commit lineage: code `2f50cd1` → evidence below)
 
 D3 (C0, seed 1647674144, D1's exact 24-family train set + disjoint 24-family holdout = next 6 sha256-ranked complete families per depth) probed the post-final-RMSNorm 512-d `<DECIDE>` state at T0/T100/T2000 with clean code→evidence lineage (`code_git_commit = 2f50cd1...`, tree clean at start, frozen Q1 digests, runtime snapshot digest, train/holdout family-list digests all recorded in `diagnostics/d3_representation.json`):
