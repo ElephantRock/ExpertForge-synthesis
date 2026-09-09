@@ -1474,15 +1474,204 @@ def run_d4b2(updates: int = 2000) -> dict:
     })
 
 
+# ------------------------------------------------------------------ D4-B3 ----
+
+
+def _probe_metric(probe: dict, path: tuple[str, ...]):
+    value = probe
+    for key in path:
+        value = value[key]
+    return value
+
+
+_D4B_PREFIX_METRICS = [
+    ("train_SMA", ("train_ID", "cmdr_sma")),
+    ("train_CE", ("train_ID", "ce_mean")),
+    ("eval_ID_SMA", ("eval_ID", "cmdr_sma")),
+    ("eval_STRUCT_SMA", ("eval_STRUCT", "cmdr_sma")),
+    ("unseen_family_E_minus_C_alignment",
+     ("unseen_family_geometry", "cross_family_displacement", "E_minus_C", "mean_pairwise_cos")),
+]
+_D4B_PREFIX_TAGS = ["T0", "T400", "T800", "T1200", "T1600", "T2000"]
+
+
+def run_d4b3(updates: int = 8000, prefix_updates: int = 2000) -> dict:
+    """D4-B3 / FC-8K: single family-coherent arm at the full 8,000-update
+    horizon. Fail-closed prefix gate at T{prefix_updates}: the run must exactly
+    reproduce the D4-B FC arm on five metrics at six probes before the
+    remaining updates are spent."""
+    raw_train_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl"
+    raw_train = [json.loads(line) for line in raw_train_path.open(encoding="utf-8")]
+    raw_eval_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl"
+    raw_eval = [json.loads(line) for line in raw_eval_path.open(encoding="utf-8")]
+    probe_rows, probe_digest = _d4a_probe_rows(raw_eval)
+
+    d4b = json.loads((DIAG_DIR / "d4b_label_balanced_disjoint.json").read_text(encoding="utf-8"))
+    d4b_fc_probes = d4b["arms"]["FC"]["probes"]
+
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    tree_clean = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True,
+    ).stdout.strip() == ""
+
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+
+    telemetry: list[dict] = []
+    probes: dict[str, dict] = {}
+    prefix_batch_hasher = hashlib.sha256()
+
+    def capture(tag: str, update: int) -> None:
+        probes[tag] = {
+            "update": update,
+            "train_ID": _eval_surface_metrics(model, train_rows, device),
+            "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+            "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+            "unseen_family_geometry": _d3_probe_geometry(model, probe_rows, device),
+        }
+        print(
+            f"[D4B3 FC-8K] probe {tag}: train SMA={probes[tag]['train_ID']['cmdr_sma']:.4f} "
+            f"eval_ID SMA={probes[tag]['eval_ID']['cmdr_sma']:.6f} "
+            f"eval_STRUCT SMA={probes[tag]['eval_STRUCT']['cmdr_sma']:.6f} "
+            f"train_CE={probes[tag]['train_ID']['ce_mean']:.4f}",
+            flush=True,
+        )
+
+    torch.cuda.reset_peak_memory_stats(device)
+    capture("T0", 0)
+    started = time.time()
+    for update in range(1, updates + 1):
+        lr = learning_rate(update)
+        for group in optimizer.param_groups:
+            group["lr"] = lr
+        batch_indices = stream.take(128)
+        if update <= prefix_updates:
+            prefix_batch_hasher.update(json.dumps(batch_indices).encode())
+        optimizer.zero_grad(set_to_none=True)
+        micro_losses, micro_argmaxes = [], []
+        for micro in range(GRAD_ACCUM):
+            rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+            ids, decide, labels = collate(rows, device)
+            logits = model(ids, decide)
+            loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+            micro_losses.append(loss.detach())
+            with torch.no_grad():
+                micro_argmaxes.append(logits.detach().argmax(dim=-1))
+            (loss / GRAD_ACCUM).backward()
+        with torch.no_grad():
+            embed_grad_norm = float(model.embed_tokens.weight.grad.norm())
+            classifier_grad_norm = float(model.classifier.weight.grad.norm())
+            batch_ce = float(torch.stack(micro_losses).mean())
+            argmax = torch.cat(micro_argmaxes).cpu()
+            hist = torch.bincount(argmax, minlength=3).tolist()
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+        optimizer.step()
+        if update <= 200 or update % 10 == 0:
+            telemetry.append({
+                "update": update, "lr": lr, "batch_ce_mean": batch_ce,
+                "pred_hist": hist, "grad_norm_pre_clip": float(grad_norm),
+                "classifier_w_grad_norm": classifier_grad_norm,
+                "embed_grad_norm": embed_grad_norm,
+            })
+        if update % 400 == 0:
+            capture(f"T{update}", update)
+        if update == prefix_updates:
+            prefix_hash = prefix_batch_hasher.hexdigest()
+            mismatches = []
+            for tag in _D4B_PREFIX_TAGS:
+                for name, path in _D4B_PREFIX_METRICS:
+                    mine = _probe_metric(probes[tag], path)
+                    ref = _probe_metric(d4b_fc_probes[tag], path)
+                    if mine != ref:
+                        mismatches.append({"probe": tag, "metric": name, "new": mine, "d4b_fc": ref})
+            prefix_report = {
+                "prefix_updates": prefix_updates,
+                "first_batch_sha256": prefix_hash,
+                "probes_compared": _D4B_PREFIX_TAGS,
+                "metrics_compared": [name for name, _ in _D4B_PREFIX_METRICS],
+                "mismatches": mismatches,
+                "reproduced": not mismatches,
+            }
+            print(f"[D4B3] prefix gate at T{prefix_updates}: reproduced={prefix_report['reproduced']} "
+                  f"batch-hash={prefix_hash[:16]}", flush=True)
+            if mismatches:
+                DIAG_DIR.mkdir(parents=True, exist_ok=True)
+                (DIAG_DIR / "d4b3_prefix_failure.json").write_text(
+                    json.dumps(prefix_report, indent=2), encoding="utf-8"
+                )
+                raise SystemExit(
+                    f"D4-B3 prefix gate FAILED at T{prefix_updates}: "
+                    f"{len(mismatches)} metric mismatches vs D4-B FC; run stopped."
+                )
+    wall = time.time() - started
+
+    final = probes[f"T{updates}"]
+    eid = final["eval_ID"]["cmdr_sma"]
+    estr = final["eval_STRUCT"]["cmdr_sma"]
+    tr = final["train_ID"]["cmdr_sma"]
+    if eid >= 0.45 and estr >= 0.45:
+        endpoint = "FULL_HORIZON_TRANSFER"
+    elif eid >= 0.45 or estr >= 0.45 or eid > 0.36 or estr > 0.36:
+        endpoint = "ID_ONLY_OR_PARTIAL_TRANSFER"
+    elif tr >= 0.90:
+        endpoint = "FIT_NO_TRANSFER"
+    else:
+        endpoint = "NO_TRANSFER_UNDERFIT"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4B3-FC-8K-v0",
+        "authority": "issue #3 D4-B3 / FC-8K (8,000-update family-coherent extension); D4-C and all other factors held; result does not reopen v0.5 Q2",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "eval_probe_family_list_sha256": probe_digest,
+        "prefix_reproduction_gate": prefix_report,
+        "endpoint_criteria": {
+            "FULL_HORIZON_TRANSFER": "eval_ID >= 0.45 AND eval_STRUCT >= 0.45",
+            "ID_ONLY_OR_PARTIAL_TRANSFER": "one surface >= 0.45, or either > 0.36 but < 0.45",
+            "FIT_NO_TRANSFER": "both <= 0.36 AND train_ID >= 0.90",
+            "NO_TRANSFER_UNDERFIT": "both <= 0.36 AND train_ID < 0.90",
+        },
+        "final_diagnostics": {
+            "Q": (eid + estr) / 2.0,
+            "Q_ID": eid,
+            "Q_STRUCT": estr,
+            "train_ID_SMA": tr,
+            "train_ID_CE": final["train_ID"]["ce_mean"],
+            "Q_2_4_ID": final["eval_ID"]["sma_depth_2_4"],
+            "Q_2_4_STRUCT": final["eval_STRUCT"]["sma_depth_2_4"],
+            "min_label_recall_ID": final["eval_ID"]["min_label_recall"],
+            "min_label_recall_STRUCT": final["eval_STRUCT"]["min_label_recall"],
+            "unseen_family_E_minus_C_alignment":
+                final["unseen_family_geometry"]["cross_family_displacement"]["E_minus_C"]["mean_pairwise_cos"],
+        },
+        "probes": probes,
+        "telemetry": telemetry,
+        "observed_endpoint": endpoint,
+        "wall_seconds": round(wall, 1),
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
     parser.add_argument("--d4a-updates", type=int, default=2000)
     parser.add_argument("--d4b-updates", type=int, default=2000)
     parser.add_argument("--d4b2-updates", type=int, default=2000)
+    parser.add_argument("--d4b3-updates", type=int, default=8000)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -1503,6 +1692,8 @@ def main() -> None:
         write_diag("d4b_label_balanced_disjoint.json", run_d4b(updates=args.d4b_updates))
     if args.mode in ("d4b2", "all"):
         write_diag("d4b2_matched_permutation_control.json", run_d4b2(updates=args.d4b2_updates))
+    if args.mode in ("d4b3", "all"):
+        write_diag("d4b3_fc_8k.json", run_d4b3(updates=args.d4b3_updates))
 
 
 if __name__ == "__main__":
