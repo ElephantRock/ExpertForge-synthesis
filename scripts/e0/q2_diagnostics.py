@@ -172,31 +172,36 @@ def run_d0(updates: int = 2000, eval_every: int = 400) -> dict:
 
 # --------------------------------------------------------------------- D1 ----
 
-def d1_family_selection(train_rows_raw: list[dict], families_per_depth: int = 6) -> list[dict]:
-    """Deterministic tiny set: complete counterfactual families, balanced across
-    label (by family construction) and depth. Rank by SHA-256, take first N."""
+def _ranked_complete_families_by_depth(train_rows_raw: list[dict]) -> dict[int, list[str]]:
+    """Depth -> ordered family IDs of complete counterfactual families (all 3
+    labels, uniform depth), ranked by sha256('E0-Q2-DIAG|D1|<family_id>')."""
+    by_family: dict[str, list[dict]] = {}
+    for row in train_rows_raw:
+        by_family.setdefault(row["family_id"], []).append(row)
+    ranked: dict[int, list[tuple[str, str]]] = {}
+    for fid, variants in by_family.items():
+        if len(variants) != 3:
+            continue
+        if sorted(v["gold_label"] for v in variants) != sorted(LABELS):
+            continue
+        depths = {v["reasoning_depth_stratum"] for v in variants}
+        if len(depths) != 1:
+            continue
+        depth = depths.pop()
+        ranked.setdefault(depth, []).append(
+            (hashlib.sha256(f"E0-Q2-DIAG|D1|{fid}".encode()).hexdigest(), fid)
+        )
+    return {d: [fid for _, fid in sorted(pairs)] for d, pairs in sorted(ranked.items())}
+
+
+def _build_family_rows(train_rows_raw: list[dict], family_ids: list[str]) -> list[dict]:
     from q1_cmdr_bootstrap import LEX
 
     by_family: dict[str, list[dict]] = {}
     for row in train_rows_raw:
         by_family.setdefault(row["family_id"], []).append(row)
-    selected_ids = []
-    for depth in range(1, 5):
-        fams = []
-        for fid, variants in by_family.items():
-            if len(variants) != 3:
-                continue
-            if any(v["reasoning_depth_stratum"] != depth for v in variants):
-                continue
-            if sorted(v["gold_label"] for v in variants) != sorted(LABELS):
-                continue
-            rank = hashlib.sha256(f"E0-Q2-DIAG|D1|{fid}".encode()).hexdigest()
-            fams.append((rank, fid))
-        fams.sort()
-        selected_ids.extend(fid for _, fid in fams[:families_per_depth])
-
     rows = []
-    for fid in selected_ids:
+    for fid in family_ids:
         for variant in sorted(by_family[fid], key=lambda v: LABELS.index(v["gold_label"])):
             ids = LEX.encode(variant["rendered"], append_decide=True)
             rows.append({
@@ -205,6 +210,35 @@ def d1_family_selection(train_rows_raw: list[dict], families_per_depth: int = 6)
                 "depth": variant["reasoning_depth_stratum"], "surface": variant["surface"],
             })
     return rows
+
+
+def d1_family_selection(train_rows_raw: list[dict], families_per_depth: int = 6) -> list[dict]:
+    """D1 tiny set: first N ranked complete families per depth (unchanged rule)."""
+    ranked = _ranked_complete_families_by_depth(train_rows_raw)
+    selected = [fid for depth in sorted(ranked) for fid in ranked[depth][:families_per_depth]]
+    return _build_family_rows(train_rows_raw, selected)
+
+
+def d3_family_sets(train_rows_raw: list[dict], per_depth: int = 6):
+    """D3 sets: TRAIN = first per_depth ranked families per depth (identical to
+    D1); HOLDOUT = the NEXT per_depth ranked families per depth (disjoint)."""
+    ranked = _ranked_complete_families_by_depth(train_rows_raw)
+    train_ids, holdout_ids = [], []
+    for depth in sorted(ranked):
+        if len(ranked[depth]) < 2 * per_depth:
+            raise AssertionError(f"depth {depth} has {len(ranked[depth])} complete families < {2*per_depth}")
+        train_ids.extend(ranked[depth][:per_depth])
+        holdout_ids.extend(ranked[depth][per_depth : 2 * per_depth])
+    assert not (set(train_ids) & set(holdout_ids))
+    train_rows = _build_family_rows(train_rows_raw, train_ids)
+    holdout_rows = _build_family_rows(train_rows_raw, holdout_ids)
+    meta = {
+        "train_family_ids": train_ids,
+        "holdout_family_ids": holdout_ids,
+        "train_family_list_sha256": hashlib.sha256(json.dumps(train_ids).encode()).hexdigest(),
+        "holdout_family_list_sha256": hashlib.sha256(json.dumps(holdout_ids).encode()).hexdigest(),
+    }
+    return train_rows, holdout_rows, meta
 
 
 def run_d1(updates: int = 2000, families_per_depth: int = 6, eval_every: int = 50) -> dict:
@@ -438,11 +472,248 @@ def run_d2() -> dict:
     })
 
 
+# --------------------------------------------------------------------- D3 ----
+
+def _decide_states(model, rows: list[dict], device) -> torch.Tensor:
+    """Post-final-RMSNorm 512-d state at <DECIDE> for each row (manual replay
+    through the exact production modules; eval mode, no grad)."""
+    from m0_model import build_rope_tables
+
+    model.eval()
+    out = []
+    with torch.no_grad():
+        for start in range(0, len(rows), MICROBATCH):
+            batch = rows[start : start + MICROBATCH]
+            ids, decide, _ = collate(batch, device)
+            x = model.embed_tokens(ids)
+            seq_len = x.shape[1]
+            cos_t, sin_t = build_rope_tables(seq_len, device)
+            mask = torch.triu(
+                torch.full((seq_len, seq_len), float("-inf"), device=device), diagonal=1
+            )
+            for layer in model.layers:
+                x = layer(x, cos_t, sin_t, mask)
+            x = model.norm(x)
+            idx = torch.arange(ids.shape[0], device=device)
+            out.append(x[idx, decide].float().cpu())
+    model.train()
+    return torch.cat(out)
+
+
+def _classifier_metrics(model, rows: list[dict], device) -> dict:
+    model.eval()
+    preds, losses = [], []
+    with torch.no_grad():
+        for start in range(0, len(rows), MICROBATCH):
+            batch = rows[start : start + MICROBATCH]
+            ids, decide, labels = collate(batch, device)
+            logits = model(ids, decide)
+            losses.append(F.cross_entropy(logits, labels, reduction="sum"))
+            preds.extend(logits.argmax(dim=-1).cpu().tolist())
+    model.train()
+    y = np.asarray([r["label_id"] for r in rows])
+    p = np.asarray(preds)
+    per_label = {name: float(np.mean(p[y == i] == i)) for i, name in enumerate(LABELS)}
+    return {
+        "accuracy": float(np.mean(p == y)),
+        "ce_mean": float(torch.stack(losses).sum() / len(rows)),
+        "pred_hist": [int(np.sum(p == i)) for i in range(3)],
+        "per_label_recall": per_label,
+        "min_label_recall": min(per_label.values()),
+    }
+
+
+_LABEL_PAIRS = [(0, 1, "E_C"), (0, 2, "E_U"), (1, 2, "C_U")]
+_DISPLACEMENTS = [(0, 1, "E_minus_C"), (0, 2, "E_minus_U"), (1, 2, "C_minus_U")]
+
+
+def _geometry(states: torch.Tensor, n_families: int):
+    """states ordered family-major with label order E/C/U (how _build_family_rows
+    emits). Returns within-family distances/cosines, family-centered residuals,
+    and cross-family displacement alignment."""
+    h = states.view(n_families, 3, -1)
+    within = {}
+    for a, b, name in _LABEL_PAIRS:
+        d = (h[:, a] - h[:, b]).norm(dim=-1)
+        cos = F.cosine_similarity(h[:, a], h[:, b], dim=-1)
+        within[name] = {
+            "l2_mean": float(d.mean()), "l2_median": float(d.median()),
+            "cos_mean": float(cos.mean()), "cos_median": float(cos.median()),
+        }
+    residuals = h - h.mean(dim=1, keepdim=True)
+    displacement = {}
+    for a, b, name in _DISPLACEMENTS:
+        v = h[:, a] - h[:, b]
+        vn = F.normalize(v, dim=-1)
+        sim = vn @ vn.T
+        iu = torch.triu_indices(n_families, n_families, offset=1)
+        sims = sim[iu[0], iu[1]]
+        displacement[name] = {
+            "mean_pairwise_cos": float(sims.mean()),
+            "median_pairwise_cos": float(sims.median()),
+            "p10": float(sims.quantile(0.1)), "p90": float(sims.quantile(0.9)),
+        }
+    displacement["vectors"] = {
+        name: F.normalize(h[:, a] - h[:, b], dim=-1) for a, b, name in _DISPLACEMENTS
+    }
+    return within, residuals, displacement
+
+
+def _cross_set_alignment(disp_train: dict, disp_holdout: dict) -> dict:
+    out = {}
+    for _, _, name in _DISPLACEMENTS:
+        sim = disp_train["vectors"][name] @ disp_holdout["vectors"][name].T
+        out[name] = {"mean_cos": float(sim.mean()), "min": float(sim.min()), "max": float(sim.max())}
+    return out
+
+
+def _centroid_classification(train_residuals: torch.Tensor, holdout_residuals: torch.Tensor) -> dict:
+    centroids = train_residuals.mean(dim=0)  # (3, D)
+    cn = F.normalize(centroids, dim=-1)
+
+    def classify(res: torch.Tensor) -> dict:
+        sims = F.normalize(res.reshape(-1, res.shape[-1]), dim=-1) @ cn.T  # (N,3)
+        pred = sims.argmax(dim=-1).numpy()
+        y = np.tile(np.arange(3), res.shape[0])
+        per_label = {name: float(np.mean(pred[y == i] == i)) for i, name in enumerate(LABELS)}
+        return {
+            "accuracy": float(np.mean(pred == y)),
+            "per_label_recall": per_label,
+            "min_label_recall": min(per_label.values()),
+        }
+
+    return {
+        "train": classify(train_residuals),
+        "holdout": classify(holdout_residuals),
+        "centroid_pairwise_cos": {
+            name: float(F.cosine_similarity(centroids[a], centroids[b], dim=-1))
+            for a, b, name in _LABEL_PAIRS
+        },
+    }
+
+
+def run_d3(updates: int = 2000, per_depth: int = 6) -> dict:
+    """D3 representation discriminability: does the label-dependent <DECIDE>-state
+    displacement align ACROSS independent counterfactual families (train and a
+    disjoint holdout), at T0 / T100 / T2000?"""
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    tree_clean_at_start = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True,
+    ).stdout.strip() == ""
+    raw_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl"
+    raw_rows = [json.loads(line) for line in raw_path.open(encoding="utf-8")]
+    train_rows, holdout_rows, fam_meta = d3_family_sets(raw_rows, per_depth)
+    n_fam = per_depth * 4
+
+    probes: dict[str, dict] = {}
+
+    def capture(tag: str) -> None:
+        st_tr = _decide_states(model, train_rows, device)
+        st_ho = _decide_states(model, holdout_rows, device)
+        within_tr, resid_tr, disp_tr = _geometry(st_tr, n_fam)
+        within_ho, resid_ho, disp_ho = _geometry(st_ho, n_fam)
+        vectors_tr, vectors_ho = disp_tr.pop("vectors"), disp_ho.pop("vectors")
+        probes[tag] = {
+            "within_family": {"train": within_tr, "holdout": within_ho},
+            "cross_family_displacement": {"train": disp_tr, "holdout": disp_ho},
+            "cross_set_displacement": _cross_set_alignment(
+                {"vectors": vectors_tr}, {"vectors": vectors_ho}
+            ),
+            "centroid_classification": _centroid_classification(resid_tr, resid_ho),
+            "classifier": {
+                "train": _classifier_metrics(model, train_rows, device),
+                "holdout": _classifier_metrics(model, holdout_rows, device),
+            },
+        }
+        print(f"[D3] captured probe {tag}", flush=True)
+
+    capture("T0")
+    memorization_history = [dict(update=0, **_classifier_metrics(model, train_rows, device))]
+    started = time.time()
+    stream = TrainStream(len(train_rows), DIAG_SEED)
+    for update in range(1, updates + 1):
+        lr = learning_rate(update)
+        for group in optimizer.param_groups:
+            group["lr"] = lr
+        batch_indices = stream.take(128)
+        optimizer.zero_grad(set_to_none=True)
+        for micro in range(GRAD_ACCUM):
+            rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+            ids, decide, labels = collate(rows, device)
+            logits = model(ids, decide)
+            loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+            (loss / GRAD_ACCUM).backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+        optimizer.step()
+        if update % 50 == 0:
+            m = _classifier_metrics(model, train_rows, device)
+            memorization_history.append(dict(update=update, **{k: m[k] for k in ("accuracy", "ce_mean", "pred_hist")}))
+        if update == 100:
+            capture("T100")
+    capture("T2000")
+
+    # Pattern classification (criteria stated explicitly; authority inspects raw
+    # geometry regardless).
+    def aligned(set_name: str, probe: str) -> bool:
+        v = probes[probe]["cross_family_displacement"][set_name]["E_minus_C"]["mean_pairwise_cos"]
+        base = abs(probes["T0"]["cross_family_displacement"][set_name]["E_minus_C"]["mean_pairwise_cos"])
+        return v > max(0.20, 4.0 * base)
+
+    final_clf_train = probes["T2000"]["classifier"]["train"]["accuracy"]
+    train_discriminative = (
+        aligned("train", "T2000")
+        or probes["T2000"]["centroid_classification"]["train"]["accuracy"] > 0.9
+    )
+    if final_clf_train >= 0.99 and not train_discriminative:
+        pattern = "CONTRADICTION_TRAIN_CLASSIFIER_VS_GEOMETRY"
+    elif aligned("train", "T2000") and aligned("holdout", "T2000"):
+        pattern = "TRAIN_ALIGNED_HOLDOUT_ALIGNED"
+    elif aligned("train", "T2000") and not aligned("holdout", "T2000"):
+        pattern = "TRAIN_ALIGNED_HOLDOUT_CHANCE"
+    else:
+        pattern = "TRAIN_NOT_DISCRIMINATIVE_GEOMETRICALLY"
+
+    final_mem = memorization_history[-1]
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D3-REPRESENTATION-v0",
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean_at_start,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "family_sets": {
+            "families_per_set": n_fam,
+            "train_examples": len(train_rows),
+            "holdout_examples": len(holdout_rows),
+            "selection_rule": "train = first 6 sha256-ranked complete families per depth (identical to D1); holdout = next 6 per depth (disjoint)",
+            "train_family_list_sha256": fam_meta["train_family_list_sha256"],
+            "holdout_family_list_sha256": fam_meta["holdout_family_list_sha256"],
+        },
+        "d1_replication": {
+            "history": memorization_history,
+            "final_train_accuracy": final_mem["accuracy"],
+            "final_train_ce_mean": final_mem["ce_mean"],
+            "note": "identical train-set selection, seed, stream, and production LR values as D1",
+        },
+        "probes": probes,
+        "pattern_criteria": {
+            "aligned": "mean_pairwise_cos(E_minus_C) > max(0.20, 4*|T0 value|)",
+            "train_discriminative": "train aligned OR train residual-centroid accuracy > 0.9",
+        },
+        "observed_pattern": pattern,
+        "wall_seconds": round(time.time() - started, 1),
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
+    parser.add_argument("--d3-updates", type=int, default=2000)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -455,6 +726,8 @@ def main() -> None:
         write_diag("d1_memorization.json", run_d1(updates=args.d1_updates))
     if args.mode in ("d2", "all"):
         write_diag("d2_label_transport_audit.json", run_d2())
+    if args.mode in ("d3", "all"):
+        write_diag("d3_representation.json", run_d3(updates=args.d3_updates))
 
 
 if __name__ == "__main__":
