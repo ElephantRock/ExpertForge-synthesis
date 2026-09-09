@@ -1,5 +1,12 @@
 # E0 Windows Local Bootstrap Status
 
+## C2 full Q2 qualification — COMPLETE; harness terminal conclusion: **Q2 UNQUALIFIED** (final; held for project-authority closure)
+
+All three frozen seeds completed 8,000 updates each under `exclude_norm_bias` from launch head `12bbe9e888ba1c1450ea6720ad80da9b4a628718` (clean tree at start; identical runtime snapshot binding; frozen Q1 digests re-verified per seed; no `scientific_failure.json`; each `best_checkpoint_sha256` matches its local uncommitted `best.pt`; parameter count 73,686,019 verified). Per-seed Q: 0.333333 / 0.333333 / 0.333333. Harness-emitted gate decision: `BELOW_FLOOR_NEXT_CANDIDATE_OR_UNQUALIFIED`, followed by the deliberate terminal exit `Q2 UNQUALIFIED: C2 remains below floor.` after all evidence was written — the pre-registered scientific conclusion, not an execution failure. Evidence: `q2_c2_evidence/seed_*_result.json` (byte-identical copies) and the updated `q2_m0_qualification_summary.json` (C0/C1 sections preserved).
+
+Ladder outcome across all three candidates: C0, C1, C2 all BELOW_FLOOR at exactly chance on both surfaces; C3 does not exist; no recipe alteration was made at any point. Q2 closure, Q3 capability/headroom disposition, and final corpus authorization rest with the project authority per the frozen contracts.
+
+
 ## C1 full Q2 qualification — COMPLETE (evidence pushed; ladder decision held for project authority)
 
 All three frozen seeds completed 8,000 updates each under `exclude_norm_bias` from launch head `226b670a9fe59f94395a3db995c67a1a2e2145c2` (clean tree at start; identical runtime snapshot binding across seeds; frozen Q1 digests re-verified per seed; no `scientific_failure.json`; each `best_checkpoint_sha256` matches its local uncommitted `best.pt`; parameter count 63,459,331 verified). Per-seed Q: 0.333333 / 0.333333 / 0.333333. Harness-emitted gate decision: **`BELOW_FLOOR_NEXT_CANDIDATE_OR_UNQUALIFIED`**. Evidence: `q2_c1_evidence/seed_*_result.json` (byte-identical copies) and the updated `q2_m0_qualification_summary.json` (C0 section preserved). No ladder inference locally; **C2 is NOT started** — the project authority recomputes the C1 gate. Per the frozen ladder, C2 is the final candidate; if it also remains below floor, Q2 is UNQUALIFIED and no C3 may be invented.
