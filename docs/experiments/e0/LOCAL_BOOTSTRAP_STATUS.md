@@ -1,5 +1,17 @@
 # E0 Windows Local Bootstrap Status
 
+## D3 representation probe — COMPLETE: `TRAIN_ALIGNED_HOLDOUT_CHANCE` (two-commit lineage: code `2f50cd1` → evidence below)
+
+D3 (C0, seed 1647674144, D1's exact 24-family train set + disjoint 24-family holdout = next 6 sha256-ranked complete families per depth) probed the post-final-RMSNorm 512-d `<DECIDE>` state at T0/T100/T2000 with clean code→evidence lineage (`code_git_commit = 2f50cd1...`, tree clean at start, frozen Q1 digests, runtime snapshot digest, train/holdout family-list digests all recorded in `diagnostics/d3_representation.json`):
+
+- **TRAIN becomes strongly aligned**: E−C displacement mean pairwise cosine 0.0033 (T0) → 0.7393 (T100) → **0.9914 (T2000)**; train residual-centroid classification 1.0000 from T100 onward.
+- **HOLDOUT stays at its T0 baseline**: E−C displacement mean cosine 0.0093 (T0) → 0.0037 (T100) → **−0.0165 (T2000)**; holdout residual-centroid classification 0.3056–0.3889 ≈ chance; within-family holdout states remain nearly identical (cos 0.965) while train within-family states separate (cos 0.360, L2 26 vs 3).
+- **Production classifier**: train accuracy 1.0000 / CE 0.0000 (clean-lineage replication of D1 — identical selection, seed, stream, production LR values) while holdout accuracy 0.333–0.347 with near-constant-label histograms and min-recall 0.
+- Cross-set (train↔holdout) displacement cosine never exceeds 0.13.
+
+**Per issue #3's decision table this is the "family-specific memorization" pattern → architecture/representation/task structure becomes the leading mechanism**; scale-optimization is disfavored as the sole cause (the same budget memorizes and aligns perfectly on 24 families but produces zero cross-family transfer). No measurement contradiction occurred (train geometry and train classifier agree). D4 single-factor perturbations remain **held** pending project-authority inspection of this geometry.
+
+
 ## Q2-UNQUALIFIED diagnostics — D0–D2 complete (diagnostic branch e0/q2-unqualified-diagnostics)
 
 All outputs under `docs/experiments/e0/diagnostics/`, flagged `diagnostic_only: true` / `non_scientific: true`. No v0.5 record was modified; no D4 perturbations, Q3 scoring, corpus generation, or long runs were performed.
