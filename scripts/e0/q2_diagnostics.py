@@ -982,13 +982,252 @@ def _d3_probe_geometry(model, probe_rows: list[dict], device) -> dict:
     return {"within_family": within, "cross_family_displacement": displacement}
 
 
+# ------------------------------------------------------------------- D4-B ----
+
+D4B_LB_NAMESPACE = "E0-Q2-DIAG|D4B|lb"
+LB_C_SHIFT = 2667
+LB_U_SHIFT = 5334
+
+
+class LabelBalancedFamilyDisjointStream:
+    """D4-B LB arm: identical global E/C/U label sequence and identical per-128
+    43/43/42 balance cycle to the FC stream (slot s -> variant s mod 3), but
+    the families filling the E-, C-, and U-slots are drawn from three disjoint
+    segments of the same epoch family permutation (shifts LB_C_SHIFT /
+    LB_U_SHIFT). A 128-example batch spans a <=43-wide window of k, far below
+    both shifts, so no family can appear twice within any batch. Every one of
+    the 24,000 examples is consumed exactly once per stream epoch."""
+
+    def __init__(self, family_rows: list[dict], sid_to_idx: dict[str, int], seed: int) -> None:
+        import random as _random
+
+        self._random = _random
+        self.seed = seed
+        self.sid_to_idx = sid_to_idx
+        by_family: dict[str, list[dict]] = {}
+        for r in family_rows:
+            by_family.setdefault(r["family_id"], []).append(r)
+        self.families = sorted(by_family)
+        if len(self.families) <= LB_U_SHIFT + 48:
+            raise AssertionError("family count too small for LB shifts")
+        self.variant_of = {
+            fid: {r["label_id"]: r["sample_id"] for r in vs} for fid, vs in by_family.items()
+        }
+        self._epoch = 0
+        self._buffer: list[int] = []
+
+    def _epoch_flat(self, epoch: int) -> list[int]:
+        digest = hashlib.sha256(f"{D4B_LB_NAMESPACE}|{self.seed}|{epoch}".encode()).digest()
+        rng = self._random.Random(int.from_bytes(digest[:8], "big"))
+        fams = list(self.families)
+        rng.shuffle(fams)
+        n = len(fams)
+        flat: list[int] = []
+        for k in range(n):
+            flat.append(self.sid_to_idx[self.variant_of[fams[k]][0]])
+            flat.append(self.sid_to_idx[self.variant_of[fams[(k + LB_C_SHIFT) % n]][1]])
+            flat.append(self.sid_to_idx[self.variant_of[fams[(k + LB_U_SHIFT) % n]][2]])
+        return flat
+
+    def take(self, count: int) -> list[int]:
+        out: list[int] = []
+        while len(out) < count:
+            if not self._buffer:
+                self._buffer = self._epoch_flat(self._epoch)
+                self._epoch += 1
+            need = count - len(out)
+            out.extend(self._buffer[:need])
+            self._buffer = self._buffer[need:]
+        return out
+
+
+def run_d4b(updates: int = 2000) -> dict:
+    """D4-B label-balanced family-disjoint decomposition: FC (family-coherent)
+    vs LB (same label sequence/balance, no family co-location) on the full 24k
+    corpus, 2,000 updates, production LR function."""
+    raw_train_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl"
+    raw_train = [json.loads(line) for line in raw_train_path.open(encoding="utf-8")]
+    raw_eval_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl"
+    raw_eval = [json.loads(line) for line in raw_eval_path.open(encoding="utf-8")]
+    probe_rows, probe_digest = _d4a_probe_rows(raw_eval)
+
+    d4a_path = DIAG_DIR / "d4a_family_coherent_batching.json"
+    d4a_fc_history = None
+    if d4a_path.exists():
+        d4a = json.loads(d4a_path.read_text(encoding="utf-8"))
+        d4a_fc_history = {
+            int(tag[1:]): p["eval_ID"]["cmdr_sma"]
+            for tag, p in d4a["arms"]["FC"]["probes"].items()
+        }
+
+    stream_configs = {
+        "FC": {
+            "stream": "family-unit permutation; E/C/U variants contiguous (fixed label order)",
+            "namespace": FC_STREAM_NAMESPACE,
+        },
+        "LB": {
+            "stream": "global E/C/U slot sequence identical to FC; E/C/U slot families drawn from disjoint permutation segments",
+            "namespace": D4B_LB_NAMESPACE,
+            "shifts": {"C": LB_C_SHIFT, "U": LB_U_SHIFT},
+            "per_batch_family_disjoint": True,
+        },
+    }
+    stream_config_digest = hashlib.sha256(json.dumps(stream_configs, sort_keys=True).encode()).hexdigest()
+
+    arms: dict[str, dict] = {}
+    for arm in ("FC", "LB"):
+        ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                               REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+        device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+        train_rows = ctx["train_rows"]
+        tree_clean = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == ""
+
+        fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+        sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+        if arm == "FC":
+            stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+        else:
+            stream = LabelBalancedFamilyDisjointStream(fc_rows, sid_to_idx, DIAG_SEED)
+        take = stream.take
+
+        prev_flat = torch.cat([p.detach().flatten() for p in model.parameters()])
+        telemetry: list[dict] = []
+        probes: dict[str, dict] = {}
+
+        def capture(tag: str, update: int) -> None:
+            probes[tag] = {
+                "update": update,
+                "train_ID": _eval_surface_metrics(model, train_rows, device),
+                "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+                "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+                "unseen_family_geometry": _d3_probe_geometry(model, probe_rows, device),
+            }
+            print(
+                f"[D4B {arm}] probe {tag}: train SMA={probes[tag]['train_ID']['cmdr_sma']:.4f} "
+                f"eval_ID SMA={probes[tag]['eval_ID']['cmdr_sma']:.6f} "
+                f"train_CE={probes[tag]['train_ID']['ce_mean']:.4f}",
+                flush=True,
+            )
+
+        torch.cuda.reset_peak_memory_stats(device)
+        capture("T0", 0)
+        started = time.time()
+        for update in range(1, updates + 1):
+            lr = learning_rate(update)
+            for group in optimizer.param_groups:
+                group["lr"] = lr
+            batch_indices = take(128)
+            optimizer.zero_grad(set_to_none=True)
+            micro_losses, micro_argmaxes = [], []
+            for micro in range(GRAD_ACCUM):
+                rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+                ids, decide, labels = collate(rows, device)
+                logits = model(ids, decide)
+                loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+                micro_losses.append(loss.detach())
+                with torch.no_grad():
+                    micro_argmaxes.append(logits.detach().argmax(dim=-1))
+                (loss / GRAD_ACCUM).backward()
+            with torch.no_grad():
+                embed_grad_norm = float(model.embed_tokens.weight.grad.norm())
+                classifier_grad_norm = float(model.classifier.weight.grad.norm())
+                batch_ce = float(torch.stack(micro_losses).mean())
+                argmax = torch.cat(micro_argmaxes).cpu()
+                hist = torch.bincount(argmax, minlength=3).tolist()
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            optimizer.step()
+            with torch.no_grad():
+                flat = torch.cat([p.detach().flatten() for p in model.parameters()])
+                param_delta_norm = float((flat - prev_flat).norm())
+                prev_flat = flat
+            if update <= 200 or update % 10 == 0:
+                telemetry.append({
+                    "update": update, "lr": lr, "batch_ce_mean": batch_ce,
+                    "pred_hist": hist, "grad_norm_pre_clip": float(grad_norm),
+                    "classifier_w_grad_norm": classifier_grad_norm,
+                    "embed_grad_norm": embed_grad_norm,
+                    "param_delta_norm": param_delta_norm,
+                })
+            if update % 400 == 0:
+                capture(f"T{update}", update)
+        wall = time.time() - started
+
+        fc_vs_d4a = None
+        if arm == "FC" and d4a_fc_history:
+            fc_vs_d4a = {
+                str(u): probes[f"T{u}"]["eval_ID"]["cmdr_sma"] == d4a_fc_history[u]
+                for u in (0, 400, 800, 1200, 1600, 2000) if u in d4a_fc_history
+            }
+        arms[arm] = {
+            "stream_config": stream_configs[arm],
+            "working_tree_clean_at_start": tree_clean,
+            "parameter_count": sum(p.numel() for p in model.parameters()),
+            "telemetry": telemetry,
+            "probes": probes,
+            "wall_seconds": round(wall, 1),
+            "cuda_peak_allocated_bytes": int(torch.cuda.max_memory_allocated(device)),
+            "fc_scalar_reproduces_d4a": fc_vs_d4a,
+        }
+        del model, optimizer
+        torch.cuda.empty_cache()
+
+    def engaged(arm_name: str) -> bool:
+        final_ces = [t["batch_ce_mean"] for t in arms[arm_name]["telemetry"] if t["update"] >= 1950]
+        return sum(final_ces) / len(final_ces) <= 1.05
+
+    def transfers(arm_name: str) -> bool:
+        return arms[arm_name]["probes"]["T2000"]["eval_ID"]["cmdr_sma"] >= 0.45
+
+    fc_final_ce = arms["FC"]["probes"]["T2000"]["train_ID"]["ce_mean"]
+    lb_final_ce = arms["LB"]["probes"]["T2000"]["train_ID"]["ce_mean"]
+    if engaged("FC") and not engaged("LB"):
+        pattern = "COLOCATION_CAUSES_ENGAGEMENT"
+    elif engaged("FC") and engaged("LB") and abs(fc_final_ce - lb_final_ce) < 0.05 and not transfers("FC") and not transfers("LB"):
+        pattern = "LABEL_BALANCE_EXPLAINS_ENGAGEMENT"
+    elif transfers("LB") and not transfers("FC"):
+        pattern = "LB_TRANSFERS_FC_NOT"
+    elif transfers("FC") and not transfers("LB"):
+        pattern = "FC_TRANSFERS_LB_NOT"
+    else:
+        pattern = "INCONCLUSIVE"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4B-LABEL-BALANCED-DISJOINT-v0",
+        "authority": "issue #3 D4-B (label-balanced, family-disjoint batching decomposition); all other factors held",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": arms["FC"]["parameter_count"],
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "family_stream_config_sha256": stream_config_digest,
+        "eval_probe_family_list_sha256": probe_digest,
+        "batch_contract": {"effective_batch": 128, "microbatch": 16, "accumulation": 8,
+                           "label_balance_per_128": "43/43/42 (identical FC/LB global E/C/U slot sequence)",
+                           "lb_family_disjoint_within_batch": True},
+        "pattern_criteria": {
+            "engaged": "mean batch CE over updates >=1950 <= 1.05 (ln3 = 1.0986)",
+            "transfers": "eval_ID CMDR-SMA at T2000 >= 0.45",
+            "label_balance_explains": "both engaged, |train_CE_FC - train_CE_LB| < 0.05, neither transfers",
+        },
+        "arms": arms,
+        "observed_pattern": pattern,
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
     parser.add_argument("--d4a-updates", type=int, default=2000)
+    parser.add_argument("--d4b-updates", type=int, default=2000)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -1005,6 +1244,8 @@ def main() -> None:
         write_diag("d3_representation.json", run_d3(updates=args.d3_updates))
     if args.mode in ("d4a", "all"):
         write_diag("d4a_family_coherent_batching.json", run_d4a(updates=args.d4a_updates))
+    if args.mode in ("d4b", "all"):
+        write_diag("d4b_label_balanced_disjoint.json", run_d4b(updates=args.d4b_updates))
 
 
 if __name__ == "__main__":
