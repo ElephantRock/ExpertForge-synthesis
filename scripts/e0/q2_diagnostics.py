@@ -1220,14 +1220,269 @@ def run_d4b(updates: int = 2000) -> dict:
     })
 
 
+# ------------------------------------------------------------------ D4-B2 ----
+
+
+class MatchedPermutationFamilyDisjointStream:
+    """D4-B2 LB-MP arm: family permutation derived from the EXACT FC rule
+    (namespace E0-Q2-DIAG|D4A|fc, same seed and per-epoch SHA-256 hashing),
+    then E/C/U slots filled from that permutation at offsets 0 / 2667 / 5334.
+    Removes co-location while holding the family presentation permutation,
+    the global label sequence, and the 43/43/42 balance identical to FC."""
+
+    def __init__(self, family_rows: list[dict], sid_to_idx: dict[str, int], seed: int) -> None:
+        import random as _random
+
+        self._random = _random
+        self.seed = seed
+        self.sid_to_idx = sid_to_idx
+        by_family: dict[str, list[dict]] = {}
+        for r in family_rows:
+            by_family.setdefault(r["family_id"], []).append(r)
+        self.families = sorted(by_family)
+        self.variant_of = {
+            fid: {r["label_id"]: r["sample_id"] for r in vs} for fid, vs in by_family.items()
+        }
+        self._epoch = 0
+        self._buffer: list[int] = []
+
+    def _fc_epoch_permutation(self, epoch: int) -> list[str]:
+        digest = hashlib.sha256(f"{FC_STREAM_NAMESPACE}|{self.seed}|{epoch}".encode()).digest()
+        rng = self._random.Random(int.from_bytes(digest[:8], "big"))
+        fams = list(self.families)
+        rng.shuffle(fams)
+        return fams
+
+    def _epoch_flat(self, epoch: int) -> list[int]:
+        fams = self._fc_epoch_permutation(epoch)
+        n = len(fams)
+        flat: list[int] = []
+        for k in range(n):
+            flat.append(self.sid_to_idx[self.variant_of[fams[k]][0]])
+            flat.append(self.sid_to_idx[self.variant_of[fams[(k + LB_C_SHIFT) % n]][1]])
+            flat.append(self.sid_to_idx[self.variant_of[fams[(k + LB_U_SHIFT) % n]][2]])
+        return flat
+
+    def take(self, count: int) -> list[int]:
+        out: list[int] = []
+        while len(out) < count:
+            if not self._buffer:
+                self._buffer = self._epoch_flat(self._epoch)
+                self._epoch += 1
+            need = count - len(out)
+            out.extend(self._buffer[:need])
+            self._buffer = self._buffer[need:]
+        return out
+
+
+def _verify_lbmp(lbmp: MatchedPermutationFamilyDisjointStream,
+                 fc: FamilyCoherentStream,
+                 raw_rows: list[dict], n_batches: int) -> dict:
+    """Fail-closed pre-training verification per the D4-B2 release."""
+    from collections import Counter
+
+    n = len(lbmp.families)
+
+    perm_digest_checks, e_slot_checks, epoch_coverage_checks = [], [], []
+    for epoch in range(0, (n_batches * 128) // (3 * n) + 2):
+        lbmp_perm = lbmp._fc_epoch_permutation(epoch)
+        # FC's flat stream is family blocks (3 indices each) in presentation
+        # order; production index i corresponds to raw_rows[i] (same file order)
+        fc_flat = fc._epoch_flat(epoch)
+        fc_perm = [raw_rows[fc_flat[pos]]["family_id"] for pos in range(0, len(fc_flat), 3)]
+        d1 = hashlib.sha256(json.dumps(lbmp_perm).encode()).hexdigest()
+        d2 = hashlib.sha256(json.dumps(fc_perm).encode()).hexdigest()
+        perm_digest_checks.append(d1 == d2)
+        e_slot_checks.append(all(lbmp_perm[k] == fc_perm[k] for k in range(n)))
+        flat = lbmp._epoch_flat(epoch)
+        epoch_coverage_checks.append(sorted(flat) == list(range(len(raw_rows))))
+
+    # Fresh streams for the horizon-level checks (label sequence identity and
+    # family multiplicity in every batch, including epoch-boundary crossings).
+    lbmp2 = MatchedPermutationFamilyDisjointStream.__new__(MatchedPermutationFamilyDisjointStream)
+    lbmp2.__dict__.update({k: v for k, v in lbmp.__dict__.items() if k not in ("_buffer", "_epoch")})
+    lbmp2._epoch, lbmp2._buffer = 0, []
+    fc2 = FamilyCoherentStream.__new__(FamilyCoherentStream)
+    fc2.__dict__.update({k: v for k, v in fc.__dict__.items() if k not in ("_buffer", "_epoch")})
+    fc2._epoch, fc2._buffer = 0, []
+
+    lid = {r["sample_id"]: LABELS.index(r["gold_label"]) for r in raw_rows}
+    seq_ok, mult_violations, max_mult = True, [], 0
+    for b in range(n_batches):
+        fb = fc2.take(128)
+        lb = lbmp2.take(128)
+        if [lid[raw_rows[i]["sample_id"]] for i in fb] != [lid[raw_rows[i]["sample_id"]] for i in lb]:
+            seq_ok = False
+        c = Counter(raw_rows[i]["family_id"] for i in lb)
+        m = max(c.values())
+        max_mult = max(max_mult, m)
+        if m > 1:
+            mult_violations.append({"batch": b, "max_multiplicity": m})
+
+    return {
+        "permutation_digest_matches_fc_all_epochs": all(perm_digest_checks),
+        "epochs_checked": len(perm_digest_checks),
+        "e_slot_family_matches_fc_all_epochs": all(e_slot_checks),
+        "epoch_coverage_exact_all_epochs": all(epoch_coverage_checks),
+        "label_sequence_identical_to_fc_all_batches": seq_ok,
+        "batches_checked": n_batches,
+        "max_family_multiplicity_any_batch_including_boundaries": max_mult,
+        "multiplicity_violations": mult_violations[:10],
+        "ok": (
+            all(perm_digest_checks) and all(e_slot_checks) and all(epoch_coverage_checks)
+            and seq_ok and not mult_violations
+        ),
+    }
+
+
+def run_d4b2(updates: int = 2000) -> dict:
+    """D4-B2 matched-permutation family-disjoint control: a single LB-MP arm —
+    same FC permutation, same label sequence/balance, no co-location."""
+    raw_train_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl"
+    raw_train = [json.loads(line) for line in raw_train_path.open(encoding="utf-8")]
+    raw_eval_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl"
+    raw_eval = [json.loads(line) for line in raw_eval_path.open(encoding="utf-8")]
+    probe_rows, probe_digest = _d4a_probe_rows(raw_eval)
+
+    d4b = json.loads((DIAG_DIR / "d4b_label_balanced_disjoint.json").read_text(encoding="utf-8"))
+    d4b_fc_final_ce = d4b["arms"]["FC"]["probes"]["T2000"]["train_ID"]["ce_mean"]
+
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    tree_clean = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True,
+    ).stdout.strip() == ""
+
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fc = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    stream = MatchedPermutationFamilyDisjointStream(fc_rows, sid_to_idx, DIAG_SEED)
+
+    n_batches = updates
+    verification = _verify_lbmp(stream, fc, raw_train, n_batches)
+    if not verification["ok"]:
+        (DIAG_DIR / "d4b2_verification_failure.json").write_text(
+            json.dumps(verification, indent=2), encoding="utf-8"
+        )
+        raise SystemExit(f"D4-B2 verification failed: {json.dumps({k: v for k, v in verification.items() if k != 'ok'})[:400]}")
+
+    prev_flat = torch.cat([p.detach().flatten() for p in model.parameters()])
+    telemetry: list[dict] = []
+    probes: dict[str, dict] = {}
+
+    def capture(tag: str, update: int) -> None:
+        probes[tag] = {
+            "update": update,
+            "train_ID": _eval_surface_metrics(model, train_rows, device),
+            "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+            "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+            "unseen_family_geometry": _d3_probe_geometry(model, probe_rows, device),
+        }
+        print(
+            f"[D4B2 LB-MP] probe {tag}: train SMA={probes[tag]['train_ID']['cmdr_sma']:.4f} "
+            f"eval_ID SMA={probes[tag]['eval_ID']['cmdr_sma']:.6f} "
+            f"train_CE={probes[tag]['train_ID']['ce_mean']:.4f}",
+            flush=True,
+        )
+
+    torch.cuda.reset_peak_memory_stats(device)
+    capture("T0", 0)
+    started = time.time()
+    for update in range(1, updates + 1):
+        lr = learning_rate(update)
+        for group in optimizer.param_groups:
+            group["lr"] = lr
+        batch_indices = stream.take(128)
+        optimizer.zero_grad(set_to_none=True)
+        micro_losses, micro_argmaxes = [], []
+        for micro in range(GRAD_ACCUM):
+            rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+            ids, decide, labels = collate(rows, device)
+            logits = model(ids, decide)
+            loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+            micro_losses.append(loss.detach())
+            with torch.no_grad():
+                micro_argmaxes.append(logits.detach().argmax(dim=-1))
+            (loss / GRAD_ACCUM).backward()
+        with torch.no_grad():
+            embed_grad_norm = float(model.embed_tokens.weight.grad.norm())
+            classifier_grad_norm = float(model.classifier.weight.grad.norm())
+            batch_ce = float(torch.stack(micro_losses).mean())
+            argmax = torch.cat(micro_argmaxes).cpu()
+            hist = torch.bincount(argmax, minlength=3).tolist()
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+        optimizer.step()
+        with torch.no_grad():
+            flat = torch.cat([p.detach().flatten() for p in model.parameters()])
+            param_delta_norm = float((flat - prev_flat).norm())
+            prev_flat = flat
+        if update <= 200 or update % 10 == 0:
+            telemetry.append({
+                "update": update, "lr": lr, "batch_ce_mean": batch_ce,
+                "pred_hist": hist, "grad_norm_pre_clip": float(grad_norm),
+                "classifier_w_grad_norm": classifier_grad_norm,
+                "embed_grad_norm": embed_grad_norm,
+                "param_delta_norm": param_delta_norm,
+            })
+        if update % 400 == 0:
+            capture(f"T{update}", update)
+    wall = time.time() - started
+
+    final_telemetry_ce = [t["batch_ce_mean"] for t in telemetry if t["update"] >= 1950]
+    mean_final_ce = sum(final_telemetry_ce) / len(final_telemetry_ce)
+    final_train_ce = probes["T2000"]["train_ID"]["ce_mean"]
+    if mean_final_ce >= 1.08 and final_train_ce >= 1.05:
+        pattern = "COLOCATION_CAUSES_ENGAGEMENT_CONFIRMED"
+    elif final_train_ce <= d4b_fc_final_ce + 0.05:
+        pattern = "ORDER_CONFOUND_MATERIAL"
+    else:
+        pattern = "INCONCLUSIVE"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4B2-MATCHED-PERMUTATION-CONTROL-v0",
+        "authority": "issue #3 D4-B2 (matched-permutation family-disjoint control); D4-C and all other factors held",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "eval_probe_family_list_sha256": probe_digest,
+        "stream_verification": verification,
+        "d4b_fc_reference_final_train_ce": d4b_fc_final_ce,
+        "pattern_criteria": {
+            "confirmed": "mean batch CE (u>=1950) >= 1.08 AND T2000 train CE >= 1.05 (pinned at ln3)",
+            "order_confound": "T2000 train CE <= D4-B FC T2000 train CE + 0.05",
+        },
+        "arm": {
+            "stream_config": {
+                "stream": "FC-rule family permutation (namespace E0-Q2-DIAG|D4A|fc) + E/C/U offsets 0/2667/5334",
+                "offsets": {"E": 0, "C": LB_C_SHIFT, "U": LB_U_SHIFT},
+                "family_disjoint_within_batch": True,
+            },
+            "telemetry": telemetry,
+            "probes": probes,
+            "wall_seconds": round(wall, 1),
+            "cuda_peak_allocated_bytes": int(torch.cuda.max_memory_allocated(device)),
+        },
+        "observed_pattern": pattern,
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
     parser.add_argument("--d4a-updates", type=int, default=2000)
     parser.add_argument("--d4b-updates", type=int, default=2000)
+    parser.add_argument("--d4b2-updates", type=int, default=2000)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -1246,6 +1501,8 @@ def main() -> None:
         write_diag("d4a_family_coherent_batching.json", run_d4a(updates=args.d4a_updates))
     if args.mode in ("d4b", "all"):
         write_diag("d4b_label_balanced_disjoint.json", run_d4b(updates=args.d4b_updates))
+    if args.mode in ("d4b2", "all"):
+        write_diag("d4b2_matched_permutation_control.json", run_d4b2(updates=args.d4b2_updates))
 
 
 if __name__ == "__main__":
