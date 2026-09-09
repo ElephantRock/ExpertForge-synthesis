@@ -1,5 +1,17 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-B3 / FC-8K full-horizon family-coherent extension — COMPLETE: `FIT_NO_TRANSFER` (two-commit lineage: code `e290fe7` → evidence below)
+
+Single FC arm (8,000 updates, full 24k corpus, wall 1.81 h) from clean Commit M (`e290fe7197cdd2fedea2f16540b3633adacc4b58`; `parameter_count = 53,232,643`, clean tree at start, frozen Q1 digests, probe digest, full record in `diagnostics/d4b3_fc_8k.json`). The fail-closed prefix gate at T2000 **passed**: all 30 comparisons (6 probes × train-SMA / train-CE / eval-ID-SMA / eval-STRUCT-SMA / unseen-family E−C alignment) exactly reproduced the D4-B FC arm; first-2,000-batch SHA-256 `110a615b62dd3fa9...` recorded.
+
+**Endpoint: `FIT_NO_TRANSFER`** (both eval ≤ 0.36, train ≥ 0.90):
+- train_ID SMA rose monotonically 0.3335 → 0.6694 (T2000) → 0.9384 (T4000) → 0.9998 (T8000); train CE 1.358 → 0.0020 — near-perfect memorization of all 8,000 training families.
+- eval_ID SMA stayed 0.331–0.339 at every one of 21 probes (final 0.334667); eval_STRUCT final 0.335667; diagnostic Q = 0.3352; Q₂:₄ 0.3338/0.3369; min label recall 0.326/0.281.
+- Unseen-family E−C alignment never left its T0 baseline (final −0.0132) — the D3-style secondary mechanism check shows the memorized representation remains family-specific at the full horizon.
+
+**Reading (per the preregistered endpoint table):** family-coherent batching at the full production horizon produces complete training-corpus memorization with zero transfer to held-out surfaces or unseen families. Per the D4-B3 release, this does not reopen v0.5 Q2 (which remains UNQUALIFIED); it is diagnostic evidence for any v0.6 recipe proposal — the student can fit the corpus under co-location but extracts no generalizing relational rule under the frozen recipe. D4-C, Q3, corpus generation, new qualification, and all other perturbations remain **held** pending project-authority review of Commit N.
+
+
 ## D4-B2 matched-permutation family-disjoint control — COMPLETE: `COLOCATION_CAUSES_ENGAGEMENT_CONFIRMED` (two-commit lineage: code `95dbeaa` → evidence below)
 
 Single LB-MP arm (2,000 updates, full 24k corpus) from clean Commit K (`95dbeaa5b81d048cf71a081402af35cf51ebc3b2`; `parameter_count = 53,232,643`, clean tree at start, frozen Q1 digests, runtime digest, full lineage in `diagnostics/d4b2_matched_permutation_control.json`). LB-MP derives its family permutation from the **exact FC namespace/seed/epoch rule** and fills E/C/U slots at offsets 0/2667/5334 — removing co-location while holding the family presentation permutation, label sequence, and 43/43/42 balance identical to FC. The fail-closed pre-training verification passed every check: permutation digests identical to FC across all 12 epochs consumed, E-slot family k = FC family k for all k, epoch coverage exact, label sequence identical across all 2,000 batches, and **max family multiplicity 1 in every batch including all epoch-boundary crossings** (zero violations; pre-verified deterministically for this exact horizon).
