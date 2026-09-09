@@ -1,0 +1,159 @@
+{
+  "schema_id": "E0-Q3-SMOKE-v0",
+  "git_commit": "35c6a8f21169202dbc297fa5908f5f09d6c7d39c",
+  "non_scientific": true,
+  "tokenizer_checks": {
+    "S0C0": {
+      "registry_id": "S0C0",
+      "ok": true,
+      "error": null,
+      "abc": {
+        "answer_form": " <L>",
+        "token_ids": {
+          "A": 330,
+          "B": 389,
+          "C": 340
+        },
+        "token_pieces": {
+          "A": "\u0120A",
+          "B": "\u0120B",
+          "C": "\u0120C"
+        },
+        "token_decoded": {
+          "A": " A",
+          "B": " B",
+          "C": " C"
+        }
+      },
+      "chat_template_available": true
+    },
+    "S0C1": {
+      "registry_id": "S0C1",
+      "ok": true,
+      "error": null,
+      "abc": {
+        "answer_form": " <L>",
+        "token_ids": {
+          "A": 362,
+          "B": 425,
+          "C": 356
+        },
+        "token_pieces": {
+          "A": "\u0120A",
+          "B": "\u0120B",
+          "C": "\u0120C"
+        },
+        "token_decoded": {
+          "A": " A",
+          "B": " B",
+          "C": " C"
+        }
+      },
+      "chat_template_available": true
+    },
+    "S0C2": {
+      "registry_id": "S0C2",
+      "ok": true,
+      "error": null,
+      "abc": {
+        "answer_form": " <L>",
+        "token_ids": {
+          "A": 1098,
+          "B": 1133,
+          "C": 1102
+        },
+        "token_pieces": {
+          "A": "\u2581A",
+          "B": "\u2581B",
+          "C": "\u2581C"
+        },
+        "token_decoded": {
+          "A": "A",
+          "B": "B",
+          "C": "C"
+        }
+      },
+      "chat_template_available": true
+    }
+  },
+  "model_interface_checks": {
+    "S0C0": {
+      "registry_id": "S0C0",
+      "ok": true,
+      "error": null,
+      "static_config": {
+        "fields": {
+          "hidden_size": {
+            "actual": 2048,
+            "registry": 2048
+          },
+          "num_hidden_layers": {
+            "actual": 24,
+            "registry": 24
+          },
+          "num_attention_heads": {
+            "actual": 32,
+            "registry": 32
+          },
+          "num_key_value_heads": {
+            "actual": 32,
+            "registry": 32
+          }
+        },
+        "ok": true,
+        "param_count": 1711376384
+      },
+      "tpds_module_path": "lm_head",
+      "resolved_device_map": {
+        "": "cuda:0"
+      },
+      "resource_feasible": true,
+      "resource_ceiling_notes": [],
+      "host_peak_memory_bytes": 4310454272,
+      "abc": {
+        "answer_form": " <L>",
+        "token_ids": {
+          "A": 330,
+          "B": 389,
+          "C": 340
+        },
+        "token_pieces": {
+          "A": "\u0120A",
+          "B": "\u0120B",
+          "C": "\u0120C"
+        },
+        "token_decoded": {
+          "A": " A",
+          "B": " B",
+          "C": " C"
+        }
+      },
+      "tpds_replay": {
+        "max_abs_diff": 0.0,
+        "atol": 1e-05,
+        "rtol": 1e-05,
+        "pass": true,
+        "tpds_hidden_width": 2048,
+        "tpds_sequence_shape": [
+          1,
+          416,
+          2048
+        ]
+      },
+      "two_pass_determinism": {
+        "examples": 3,
+        "max_tpds_abs_diff": 0.0,
+        "max_semantic_logit_abs_diff": 0.0,
+        "argmax_mismatches": 0,
+        "pass": true
+      },
+      "cuda_peak_allocated_bytes": 3671008768,
+      "execution_dtype": "bfloat16"
+    }
+  },
+  "status": "PASS",
+  "status_detail": {
+    "tokenizers_all_ok": true,
+    "model_checks_ok": true
+  }
+}

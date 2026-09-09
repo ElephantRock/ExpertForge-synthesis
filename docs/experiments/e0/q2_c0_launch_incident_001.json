@@ -1,0 +1,29 @@
+{
+  "schema_id": "E0-Q2-C0-LAUNCH-INCIDENT-v0",
+  "incident_id": "q2_c0_launch_incident_001",
+  "classification": "INFRASTRUCTURE_INVALID_PRE_MODEL",
+  "attempted_branch_head": "48b2597f14405ea046c71e627a5bc63a54feb85a",
+  "candidate": "C0",
+  "seed_started": null,
+  "updates_completed": 0,
+  "model_constructed": false,
+  "normal_result_emitted": false,
+  "scientific_failure_emitted": false,
+  "exception_type": "NameError",
+  "exception_symbol": "subprocess",
+  "failure_location": "scripts/e0/q2_m0_qualify.py line 690 (scientific main path, lineage assembly: working_tree_clean_at_start subprocess.run call)",
+  "root_cause": "P3 lineage block calls bare subprocess.run while subprocess was imported only locally inside subprocess_git_head(); the scientific main branch was not traversed by any prior smoke evidence",
+  "stdout_log_local_path": "local_data/e0_qualification_bootstrap/Q2/C0_full_run.log",
+  "stdout_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_log_local_path": "local_data/e0_qualification_bootstrap/Q2/C0_full_run.err.log",
+  "stderr_log_sha256": "a44cd9a860b11101602b2c82e8a4051016350123c02942fb1d4561cb045db42d",
+  "launched_process_pid": 38188,
+  "p1_digest_verification_result": "passed before the NameError (verify_q1_inputs precedes lineage assembly)",
+  "scientific_state_after_incident": {
+    "c0_seed_results": 0,
+    "checkpoints": 0,
+    "training_updates": 0,
+    "candidate_summaries": 0
+  },
+  "remediation_reference": "docs/experiments/e0/Q2_C0_INFRASTRUCTURE_RETRY_RELEASE.md @ 979cacbe0a372fbb532e4441ceb57aadfd88823a"
+}

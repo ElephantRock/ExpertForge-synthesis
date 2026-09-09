@@ -1,0 +1,144 @@
+{
+  "schema_id": "E0-Q2-M0-SEED-RESULT-v0",
+  "candidate": "C1",
+  "seed": 335767543,
+  "updates": 8000,
+  "eval_every": 400,
+  "wd_scope": "exclude_norm_bias",
+  "code_git_commit": "226b670a9fe59f94395a3db995c67a1a2e2145c2",
+  "working_tree_clean_at_start": true,
+  "verified_q1_input_digests": {
+    "train_ID.jsonl": "79daa2c007bc914e228a0312d8278b8f5ca7cb2c28f1450d508f9924362aacf1",
+    "eval_ID.jsonl": "b66b6629173449f71022fba0e7907826733aa7ae28e0b7502716ba4fdd45fce8",
+    "eval_STRUCT.jsonl": "688865d27b8e1fd208b2b453670306d1b4ecc9ff9a21130a297e67cc4b07c7d8",
+    "CMDR-Lex-v1.json": "c3d44e7a99163456ef149fdd1b1caf2fd694e8412e6f082480cb05c2ef237471"
+  },
+  "runtime_snapshot_sha256": "238a881ae5e30d464b8fed7858232b81357af9a9634bac5ad6257474072cb556",
+  "param_count": 63459331,
+  "selected_update": 400,
+  "selected_eval_ID_cmdr_sma": 0.3333333333333333,
+  "Q_ID": 0.3333333333333333,
+  "Q_STRUCT": 0.3333333333333333,
+  "Q": 0.3333333333333333,
+  "Q_2_4_pooled": 0.3333333333333333,
+  "Q_2_4_ID": 0.3333333333333333,
+  "Q_2_4_STRUCT": 0.3333333333333333,
+  "label_recall_pooled": {
+    "ENTAILED": 1.0,
+    "CONTRADICTED": 0.0,
+    "UNKNOWN": 0.0
+  },
+  "min_label_recall": 0.0,
+  "per_depth_accuracy_pooled": {
+    "d1": 0.3333333333333333,
+    "d2": 0.3333333333333333,
+    "d3": 0.3333333333333333,
+    "d4": 0.3333333333333333
+  },
+  "eval_history": [
+    {
+      "update": 400,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.0005
+    },
+    {
+      "update": 800,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.0004969312932656125
+    },
+    {
+      "update": 1200,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.00048780887938264277
+    },
+    {
+      "update": 1600,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.00047288159402146003
+    },
+    {
+      "update": 2000,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.0004525566146141886
+    },
+    {
+      "update": 2400,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.00042738835361579177
+    },
+    {
+      "update": 2800,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.00039806333557754604
+    },
+    {
+      "update": 3200,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.0003653814705469182
+    },
+    {
+      "update": 3600,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.00033023423460667984
+    },
+    {
+      "update": 4000,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.0002935803527312748
+    },
+    {
+      "update": 4400,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.00025641964726872524
+    },
+    {
+      "update": 4800,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.0002197657653933202
+    },
+    {
+      "update": 5200,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.0001846185294530819
+    },
+    {
+      "update": 5600,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.000151936664422454
+    },
+    {
+      "update": 6000,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 0.0001226116463842083
+    },
+    {
+      "update": 6400,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 9.744338538581147e-05
+    },
+    {
+      "update": 6800,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 7.711840597853999e-05
+    },
+    {
+      "update": 7200,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 6.219112061735721e-05
+    },
+    {
+      "update": 7600,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 5.306870673438748e-05
+    },
+    {
+      "update": 8000,
+      "eval_ID_cmdr_sma": 0.3333333333333333,
+      "lr": 5e-05
+    }
+  ],
+  "best_checkpoint_sha256": "e014fbead667e2314f2a7140ac1951f516e7227d9669304b54e85f2c36dff46f",
+  "cuda_peak_allocated_bytes": 3234139136,
+  "host_peak_memory_bytes": 1922949120,
+  "wall_seconds": 8262.945
+}

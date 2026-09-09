@@ -1,0 +1,33 @@
+{
+  "schema_id": "E0-Q2Q3-RUNTIME-SNAPSHOT-v0",
+  "captured_utc": "2026-09-07T20:24:56.292119+00:00",
+  "release_reference": "docs/experiments/e0/Q2_Q3_EXECUTION_RELEASE.md @ branch e0/qualification-bootstrap",
+  "runtime": {
+    "torch_version": "2.14.0+cu126",
+    "torch_version_cuda": "12.6",
+    "cuda_available": true,
+    "cuda_device_count": 1,
+    "cuda_device_name_0": "NVIDIA GeForce RTX 3080 Ti",
+    "cuda_total_memory_0": 12884246528,
+    "bf16_supported": true,
+    "transformers_version": "5.16.1",
+    "accelerate_version": "1.14.0",
+    "safetensors_version": "0.8.0"
+  },
+  "pinned_packages": {
+    "torch": "2.14.0+cu126",
+    "transformers": "5.16.1",
+    "accelerate": "1.14.0",
+    "safetensors": "0.8.0",
+    "numpy": "2.3.5",
+    "scikit-learn": "1.8.0",
+    "pyyaml": "6.0.3"
+  },
+  "gates": {
+    "cuda_available": true,
+    "bf16_supported": true,
+    "cuda_runtime": "12.6",
+    "status": "PASS",
+    "failures": []
+  }
+}

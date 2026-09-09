@@ -1,0 +1,69 @@
+{
+  "schema_id": "E0-Q2-SMOKE-v0",
+  "git_commit": "7d0ebd9ec437c4d86c962faba021ffb3b63a00b4",
+  "device": "cuda",
+  "torch_version": "2.14.0+cu126",
+  "checks": {
+    "deterministic_algorithms_enabled": {
+      "ok": true
+    },
+    "data_load": {
+      "train_ID": 24000,
+      "eval_ID": 6000,
+      "eval_STRUCT": 6000,
+      "overlength_rejected": 0,
+      "ok": true
+    },
+    "deterministic_data_order": {
+      "same_seed_reproducible": true,
+      "different_seed_differs": true,
+      "epoch0_is_permutation": true,
+      "ok": true
+    },
+    "lr_schedule": {
+      "lr_warmup_end": true,
+      "lr_final": true,
+      "lr_warmup_start": true,
+      "ok": true
+    },
+    "metric_sanity": {
+      "gold_cmdr_sma": 1.0,
+      "ok": true
+    },
+    "parameter_counts": {
+      "counts": {
+        "C0": {
+          "actual": 53232643,
+          "expected": 53232643
+        },
+        "C1": {
+          "actual": 63459331,
+          "expected": 63459331
+        },
+        "C2": {
+          "actual": 73686019,
+          "expected": 73686019
+        }
+      },
+      "ok": true
+    },
+    "init_audit": {
+      "rmsnorm_scales_exactly_1": true,
+      "classifier_bias_exactly_0": true,
+      "ok": true
+    },
+    "one_forward_backward_step": {
+      "wd_scope": "exclude_norm_bias",
+      "loss_finite": true,
+      "grads_finite": true,
+      "loss_bitexact_repeatable": true,
+      "grad_norm_bitexact_repeatable": true,
+      "loss": 1.1496856212615967,
+      "grad_norm": 31.71961784362793,
+      "ok": true,
+      "cuda_peak_allocated_bytes": 2506494976
+    }
+  },
+  "status": "PASS",
+  "non_scientific": true
+}
