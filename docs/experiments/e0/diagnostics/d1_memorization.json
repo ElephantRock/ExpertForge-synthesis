@@ -1,0 +1,657 @@
+{
+  "diagnostic_only": true,
+  "non_scientific": true,
+  "git_commit": "604ebfe441e79125bd068290f74b8b117a1b0145",
+  "branch": "e0/q2-unqualified-diagnostics",
+  "runtime_snapshot_sha256": "238a881ae5e30d464b8fed7858232b81357af9a9634bac5ad6257474072cb556",
+  "generated_utc": "2026-09-09T12:52:34Z",
+  "authority": "issue #3 D0-D2; no v0.5 record is modified",
+  "schema_id": "E0-Q2-DIAG-D1-MEMORIZATION-v0",
+  "candidate": "C0",
+  "seed": 1647674144,
+  "updates": 2000,
+  "wd_scope": "exclude_norm_bias",
+  "tiny_set": {
+    "families_per_depth": 6,
+    "families": 24,
+    "examples": 72,
+    "label_counts": {
+      "ENTAILED": 24,
+      "CONTRADICTED": 24,
+      "UNKNOWN": 24
+    },
+    "depth_counts": {
+      "d1": 18,
+      "d2": 18,
+      "d3": 18,
+      "d4": 18
+    },
+    "selection_rule": "complete families ranked by sha256('E0-Q2-DIAG|D1|<family_id>'), first N per depth"
+  },
+  "history": [
+    {
+      "update": 0,
+      "train_accuracy": 0.3333333333333333,
+      "train_ce_mean": 1.3928333520889282,
+      "per_label_accuracy": {
+        "ENTAILED": 0.4583333333333333,
+        "CONTRADICTED": 0.5,
+        "UNKNOWN": 0.041666666666666664
+      },
+      "pred_hist": [
+        33,
+        36,
+        3
+      ]
+    },
+    {
+      "update": 50,
+      "train_accuracy": 0.3333333333333333,
+      "train_ce_mean": 1.3298311233520508,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 0.0,
+        "UNKNOWN": 0.0
+      },
+      "pred_hist": [
+        72,
+        0,
+        0
+      ]
+    },
+    {
+      "update": 100,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 5.634557965095155e-05,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 150,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 1.8874796126056026e-07,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 200,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 5.2981899756332496e-08,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 250,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 8.278422392038465e-09,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 300,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 350,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 400,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 450,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 500,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 550,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 600,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 650,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 700,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 750,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 1.753876313159708e-05,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 800,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 9.892177331494167e-06,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 850,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 5.116058332532702e-07,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 900,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 1.6391273049976007e-07,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 950,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 5.463758512291861e-08,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1000,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 1.8212528374306203e-08,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1050,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1100,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1150,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1200,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1250,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1300,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1350,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1400,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1450,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1500,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1550,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1600,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1650,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1700,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1750,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1800,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1850,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1900,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 1950,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    },
+    {
+      "update": 2000,
+      "train_accuracy": 1.0,
+      "train_ce_mean": 0.0,
+      "per_label_accuracy": {
+        "ENTAILED": 1.0,
+        "CONTRADICTED": 1.0,
+        "UNKNOWN": 1.0
+      },
+      "pred_hist": [
+        24,
+        24,
+        24
+      ]
+    }
+  ],
+  "final_train_accuracy": 1.0,
+  "final_train_ce_mean": 0.0,
+  "final_per_label_accuracy": {
+    "ENTAILED": 1.0,
+    "CONTRADICTED": 1.0,
+    "UNKNOWN": 1.0
+  },
+  "memorization_verdict": "MEMORIZED",
+  "wall_seconds": 1288.1
+}
