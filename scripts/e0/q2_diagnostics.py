@@ -708,12 +708,287 @@ def run_d3(updates: int = 2000, per_depth: int = 6) -> dict:
     })
 
 
+# ------------------------------------------------------------------- D4-A ----
+
+FC_STREAM_NAMESPACE = "E0-Q2-DIAG|D4A|fc"
+D4A_PROBE_NAMESPACE = "E0-Q2-DIAG|D4A|probe"
+
+
+class FamilyCoherentStream:
+    """D4-A FC arm stream: families shuffled as units, E/C/U variants emitted
+    contiguously (fixed label order). Same take() semantics as the production
+    TrainStream — cross-boundary batches, no example dropped. An effective
+    batch of 128 contains 42 complete families (126 examples) plus one
+    2-example boundary fragment of the next family. Yields indices into the
+    production train_rows list (resolved by sample_id)."""
+
+    def __init__(self, family_rows: list[dict], sid_to_idx: dict[str, int], seed: int) -> None:
+        import random as _random
+
+        self._random = _random
+        self.seed = seed
+        self.sid_to_idx = sid_to_idx
+        by_family: dict[str, list[dict]] = {}
+        for r in family_rows:
+            by_family.setdefault(r["family_id"], []).append(r)
+        self.blocks = [
+            sorted(by_family[fid], key=lambda r: r["label_id"]) for fid in sorted(by_family)
+        ]
+        self._epoch = 0
+        self._buffer: list[int] = []
+
+    def _epoch_flat(self, epoch: int) -> list[int]:
+        digest = hashlib.sha256(f"{FC_STREAM_NAMESPACE}|{self.seed}|{epoch}".encode()).digest()
+        rng = self._random.Random(int.from_bytes(digest[:8], "big"))
+        order = list(range(len(self.blocks)))
+        rng.shuffle(order)
+        return [self.sid_to_idx[row["sample_id"]] for i in order for row in self.blocks[i]]
+
+    def take(self, count: int) -> list[int]:
+        out: list[int] = []
+        while len(out) < count:
+            if not self._buffer:
+                self._buffer = self._epoch_flat(self._epoch)
+                self._epoch += 1
+            need = count - len(out)
+            out.extend(self._buffer[:need])
+            self._buffer = self._buffer[need:]
+        return out
+
+
+def _eval_surface_metrics(model, rows: list[dict], device) -> dict:
+    """Full-surface metrics through the production eval batching."""
+    from q2_m0_qualify import EVAL_BATCH as _EB
+
+    model.eval()
+    preds, losses = [], []
+    with torch.no_grad():
+        for start in range(0, len(rows), _EB):
+            batch = rows[start : start + _EB]
+            ids, decide, labels = collate(batch, device)
+            logits = model(ids, decide)
+            losses.append(F.cross_entropy(logits, labels, reduction="sum"))
+            preds.extend(logits.argmax(dim=-1).cpu().tolist())
+    model.train()
+    y = np.asarray([r["label_id"] for r in rows])
+    p = np.asarray(preds)
+    depths = np.asarray([r["depth"] for r in rows])
+    per_label = {name: float(np.mean(p[y == i] == i)) for i, name in enumerate(LABELS)}
+    from q2_m0_qualify import macro_cell_accuracy, macro_cell_accuracy_depths
+
+    return {
+        "cmdr_sma": macro_cell_accuracy(y, p, depths),
+        "sma_depth_2_4": macro_cell_accuracy_depths(y, p, depths, (2, 3, 4)),
+        "accuracy": float(np.mean(p == y)),
+        "ce_mean": float(torch.stack(losses).sum() / len(rows)),
+        "pred_hist": [int(np.sum(p == i)) for i in range(3)],
+        "per_label_recall": per_label,
+        "min_label_recall": min(per_label.values()),
+    }
+
+
+def _d4a_probe_rows(raw_eval_rows: list[dict], per_depth: int = 6) -> tuple[list[dict], str]:
+    by_family: dict[str, list[dict]] = {}
+    for row in raw_eval_rows:
+        by_family.setdefault(row["family_id"], []).append(row)
+    ranked: dict[int, list[tuple[str, str]]] = {}
+    for fid, variants in by_family.items():
+        if len(variants) != 3 or len({v["gold_label"] for v in variants}) != 3:
+            continue
+        depths = {v["reasoning_depth_stratum"] for v in variants}
+        if len(depths) != 1:
+            continue
+        ranked.setdefault(depths.pop(), []).append(
+            (hashlib.sha256(f"{D4A_PROBE_NAMESPACE}|{fid}".encode()).hexdigest(), fid)
+        )
+    ids = [fid for depth in sorted(ranked) for _, fid in sorted(ranked[depth])[:per_depth]]
+    digest = hashlib.sha256(json.dumps(ids).encode()).hexdigest()
+    return _build_family_rows(raw_eval_rows, ids), digest
+
+
+def run_d4a(updates: int = 2000) -> dict:
+    """D4-A family-coherent batching falsifier: paired R (production example-
+    level stream) vs FC (family-unit stream) arms on the full 24k corpus, same
+    data/model/seed/loss/optimizer/LR/batch/compute; 2,000 updates each."""
+    raw_train_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl"
+    raw_train = [json.loads(line) for line in raw_train_path.open(encoding="utf-8")]
+    raw_eval_path = REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl"
+    raw_eval = [json.loads(line) for line in raw_eval_path.open(encoding="utf-8")]
+    probe_rows, probe_digest = _d4a_probe_rows(raw_eval)
+
+    production_seed1 = json.loads(
+        (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q2/C0/seed_1647674144/result.json")
+        .read_text(encoding="utf-8")
+    )
+    prod_eval_history = {h["update"]: h["eval_ID_cmdr_sma"] for h in production_seed1["eval_history"]}
+
+    stream_configs = {
+        "R": {
+            "stream": "production example-level TrainStream",
+            "namespace": "ExpertForge-E0-Q2|M0|perm",
+        },
+        "FC": {
+            "stream": "family-unit permutation; E/C/U variants contiguous (fixed label order)",
+            "namespace": FC_STREAM_NAMESPACE,
+        },
+    }
+    stream_config_digest = hashlib.sha256(json.dumps(stream_configs, sort_keys=True).encode()).hexdigest()
+
+    arms: dict[str, dict] = {}
+    for arm in ("R", "FC"):
+        ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                               REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+        device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+        train_rows = ctx["train_rows"]
+        tree_clean = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == ""
+
+        fc_rows = None
+        if arm == "FC":
+            fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+            sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+            stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+            take = stream.take
+        else:
+            stream = TrainStream(len(train_rows), DIAG_SEED)
+            take = stream.take
+
+        prev_flat = torch.cat([p.detach().flatten() for p in model.parameters()])
+        telemetry: list[dict] = []
+        probes: dict[str, dict] = {}
+
+        def capture(tag: str, update: int) -> None:
+            probes[tag] = {
+                "update": update,
+                "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+                "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+                "unseen_family_geometry": _d3_probe_geometry(model, probe_rows, device),
+            }
+            print(f"[D4A {arm}] probe {tag}: eval_ID SMA={probes[tag]['eval_ID']['cmdr_sma']:.6f}", flush=True)
+
+        torch.cuda.reset_peak_memory_stats(device)
+        capture("T0", 0)
+        started = time.time()
+        for update in range(1, updates + 1):
+            lr = learning_rate(update)
+            for group in optimizer.param_groups:
+                group["lr"] = lr
+            batch_indices = take(128)
+            optimizer.zero_grad(set_to_none=True)
+            micro_losses, micro_argmaxes = [], []
+            for micro in range(GRAD_ACCUM):
+                rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+                ids, decide, labels = collate(rows, device)
+                logits = model(ids, decide)
+                loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+                micro_losses.append(loss.detach())
+                with torch.no_grad():
+                    micro_argmaxes.append(logits.detach().argmax(dim=-1))
+                (loss / GRAD_ACCUM).backward()
+            with torch.no_grad():
+                embed_grad_norm = float(model.embed_tokens.weight.grad.norm())
+                classifier_grad_norm = float(model.classifier.weight.grad.norm())
+                batch_ce = float(torch.stack(micro_losses).mean())
+                argmax = torch.cat(micro_argmaxes).cpu()
+                hist = torch.bincount(argmax, minlength=3).tolist()
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            optimizer.step()
+            with torch.no_grad():
+                flat = torch.cat([p.detach().flatten() for p in model.parameters()])
+                param_delta_norm = float((flat - prev_flat).norm())
+                prev_flat = flat
+            if update <= 200 or update % 10 == 0:
+                telemetry.append({
+                    "update": update, "lr": lr, "batch_ce_mean": batch_ce,
+                    "pred_hist": hist, "grad_norm_pre_clip": float(grad_norm),
+                    "classifier_w_grad_norm": classifier_grad_norm,
+                    "embed_grad_norm": embed_grad_norm,
+                    "param_delta_norm": param_delta_norm,
+                })
+            if update % 400 == 0:
+                capture(f"T{update}", update)
+        wall = time.time() - started
+
+        r_vs_production = None
+        if arm == "R":
+            r_vs_production = {
+                str(u): probes[f"T{u}"]["eval_ID"]["cmdr_sma"] == prod_eval_history[u]
+                for u in (400, 800, 1200, 1600, 2000) if u in prod_eval_history
+            }
+        arms[arm] = {
+            "stream_config": stream_configs[arm],
+            "working_tree_clean_at_start": tree_clean,
+            "parameter_count": sum(p.numel() for p in model.parameters()),
+            "telemetry": telemetry,
+            "probes": probes,
+            "wall_seconds": round(wall, 1),
+            "cuda_peak_allocated_bytes": int(torch.cuda.max_memory_allocated(device)),
+            "r_matches_production_eval_history": r_vs_production,
+        }
+        del model, optimizer
+        torch.cuda.empty_cache()
+
+    def improved(arm_name: str) -> bool:
+        return arms[arm_name]["probes"]["T2000"]["eval_ID"]["cmdr_sma"] >= 0.45
+
+    def chance(arm_name: str) -> bool:
+        return arms[arm_name]["probes"]["T2000"]["eval_ID"]["cmdr_sma"] <= 0.36
+
+    fc_val = arms["FC"]["probes"]["T2000"]["eval_ID"]["cmdr_sma"]
+    r_val = arms["R"]["probes"]["T2000"]["eval_ID"]["cmdr_sma"]
+    if improved("FC") and chance("R"):
+        pattern = "FC_IMPROVES_R_CHANCE"
+    elif chance("FC") and chance("R"):
+        pattern = "BOTH_REMAIN_CHANCE"
+    elif improved("FC") and improved("R") and abs(fc_val - r_val) < 0.05:
+        pattern = "BOTH_IMPROVE_SIMILARLY"
+    else:
+        pattern = "MIXED_OR_INCONCLUSIVE"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4A-FAMILY-COHERENT-BATCHING-v0",
+        "authority": "issue #3 D4-A (family-coherent batching falsifier); all other D4 factors held",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": arms["R"]["parameter_count"],
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "family_stream_config_sha256": stream_config_digest,
+        "eval_probe_family_list_sha256": probe_digest,
+        "batch_contract": {"effective_batch": 128, "microbatch": 16, "accumulation": 8,
+                           "fc_complete_families_per_batch": 42, "fc_boundary_examples": 2},
+        "pattern_criteria": {
+            "improved": "eval_ID CMDR-SMA at T2000 >= 0.45",
+            "chance": "eval_ID CMDR-SMA at T2000 <= 0.36",
+            "both_improve_similarly": "both improved and |FC - R| < 0.05",
+        },
+        "arms": arms,
+        "observed_pattern": pattern,
+    })
+
+
+def _d3_probe_geometry(model, probe_rows: list[dict], device) -> dict:
+    """Unseen-family D3-style geometry: within-family distances and cross-family
+    displacement alignment among the frozen probe families."""
+    n_fam = len(probe_rows) // 3
+    states = _decide_states(model, probe_rows, device)
+    within, _residuals, displacement = _geometry(states, n_fam)
+    displacement.pop("vectors", None)
+    return {"within_family": within, "cross_family_displacement": displacement}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
+    parser.add_argument("--d4a-updates", type=int, default=2000)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -728,6 +1003,8 @@ def main() -> None:
         write_diag("d2_label_transport_audit.json", run_d2())
     if args.mode in ("d3", "all"):
         write_diag("d3_representation.json", run_d3(updates=args.d3_updates))
+    if args.mode in ("d4a", "all"):
+        write_diag("d4a_family_coherent_batching.json", run_d4a(updates=args.d4a_updates))
 
 
 if __name__ == "__main__":
