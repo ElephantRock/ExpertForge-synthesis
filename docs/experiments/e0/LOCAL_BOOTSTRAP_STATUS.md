@@ -1,5 +1,18 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-C Family-Residual Alignment — COMPLETE after remediation: `FRA_OBJECTIVE_FAILED` (lineage: code `531c593` = Commit O2 → evidence in this commit)
+
+**Incident d4c_launch_incident_001 (DIAGNOSTIC_INVALID_PRE_UPDATE)**: the first pair attempt from defective Commit O (`dc5a9b6...`) crashed at FC-FRA update 0 on a nested-tuple return in `_fra_loss_microbatch`; zero optimizer steps, no evidence; classified and remediated per the authority's release. Commit O2 (`531c5930d97530d9b2d20502b8e320bea1106fda`) contains only the flattening fix with a scalar-finite-tensor assertion, a shared `_fc_fra_forward` used verbatim by loop and preflight, and `run_d4c_preflight` (real FC-FRA branch, one effective update, fresh C0, discarded). A second external interruption (task killed mid-FC-CE ~T1600, no evidence) delayed the rerun; the aborted log is bound by SHA-256 in the incident JSON. The completed FC-CE arm from the aborted pair was NOT accepted as evidence per the release.
+
+**Preflight from clean O2: PASS** (all checks; captured state autograd-attached; 4–5 complete families per microbatch across all 16,000 FC-FRA microbatches; losses/backward/grads/step/params finite).
+
+**Paired result (2,000 updates each, frozen config λ=1.0, ε=1e-6, no temperature; probe digests `a870bfb5...` (D3 train) and `2288b187...` (unseen) recorded):**
+- **FC-CE control:** train SMA 0.3335 → 0.6694, eval chance — third exact replication of the known FC trajectory; its probe-FRA(train) fell 1.117 → 0.680 and train-probe alignment rose to 0.3008 (memorization creates partial within-train residual alignment without any unseen transfer: FRA(unseen) 1.09–1.19, unseen alignment 0.0294).
+- **FC-FRA:** the auxiliary objective **suppressed memorization without achieving alignment** — train SMA flat 0.3333, task CE pinned at ln(3), training microbatch FRA loss only drifted 1.134 → ~0.95–1.06 (vs ≈0.37 achievable with aligned residuals), probe FRA(train) 1.1475 ≈ ln(3), train-probe alignment **−0.0101** (below FC-CE's 0.3008), unseen alignment −0.0152, both eval surfaces exactly chance.
+
+**Lineage caveat (flagged for authority disposition):** the pair manifest records `working_tree_clean_at_start = false` because the protocol-generated, O2-bound preflight JSON was present untracked when the pair launched; `code_git_commit = 531c593...` is exact and no uncommitted code existed. Per the preregistered D4-C table, `FRA_OBJECTIVE_FAILED` mandates **diagnosis of the FRA implementation/objective itself before architecture conclusions** — candidate factors on the record: leave-one-out prototypes averaged over only 4–5 families per microbatch (high-variance targets), λ=1.0 auxiliary gradient interacting with the task signal inside the symmetric basin, and unit-normalized cosine logits without temperature. Q2 remains UNQUALIFIED; all perturbations, Q3, corpus, and v0.6 execution remain **held**.
+
+
 ## D4-B3 / FC-8K full-horizon family-coherent extension — COMPLETE: `FIT_NO_TRANSFER` (two-commit lineage: code `e290fe7` → evidence below)
 
 Single FC arm (8,000 updates, full 24k corpus, wall 1.81 h) from clean Commit M (`e290fe7197cdd2fedea2f16540b3633adacc4b58`; `parameter_count = 53,232,643`, clean tree at start, frozen Q1 digests, probe digest, full record in `diagnostics/d4b3_fc_8k.json`). The fail-closed prefix gate at T2000 **passed**: all 30 comparisons (6 probes × train-SMA / train-CE / eval-ID-SMA / eval-STRUCT-SMA / unseen-family E−C alignment) exactly reproduced the D4-B FC arm; first-2,000-batch SHA-256 `110a615b62dd3fa9...` recorded.

@@ -1,0 +1,101 @@
+{
+  "diagnostic_only": true,
+  "non_scientific": true,
+  "git_commit": "531c5930d97530d9b2d20502b8e320bea1106fda",
+  "branch": "e0/q2-unqualified-diagnostics",
+  "runtime_snapshot_sha256": "238a881ae5e30d464b8fed7858232b81357af9a9634bac5ad6257474072cb556",
+  "generated_utc": "2026-09-10T13:56:14Z",
+  "authority": "issue #3 D4-C remediation (DIAGNOSTIC_INVALID_PRE_UPDATE / d4c_launch_incident_001); rehearses the real FC-FRA branch",
+  "schema_id": "E0-Q2-DIAG-D4C-PREFLIGHT-v0",
+  "candidate": "C0",
+  "seed": 1647674144,
+  "effective_updates": 1,
+  "wd_scope": "exclude_norm_bias",
+  "working_tree_clean_at_start": true,
+  "code_git_commit": "531c5930d97530d9b2d20502b8e320bea1106fda",
+  "parameter_count": 53232643,
+  "verified_q1_input_digests": {
+    "train_ID.jsonl": "79daa2c007bc914e228a0312d8278b8f5ca7cb2c28f1450d508f9924362aacf1",
+    "eval_ID.jsonl": "b66b6629173449f71022fba0e7907826733aa7ae28e0b7502716ba4fdd45fce8",
+    "eval_STRUCT.jsonl": "688865d27b8e1fd208b2b453670306d1b4ecc9ff9a21130a297e67cc4b07c7d8",
+    "CMDR-Lex-v1.json": "c3d44e7a99163456ef149fdd1b1caf2fd694e8412e6f082480cb05c2ef237471"
+  },
+  "fra_config_reference": "frozen in d4c manifest; lambda=1.0, eps=1e-6, no temperature",
+  "checks": {
+    "captured_state_exists_and_attached": true,
+    "min_complete_families": 4,
+    "all_microbatches_ge_3_families": true,
+    "all_losses_finite": true,
+    "backward_succeeded": true,
+    "grad_norm_finite": true,
+    "optimizer_step_params_finite": true
+  },
+  "microbatch_reports": [
+    {
+      "micro": 0,
+      "complete_families": 5,
+      "task_ce": 1.3257107734680176,
+      "fra_loss": 1.1054091453552246,
+      "combined": 2.431119918823242,
+      "losses_finite": true
+    },
+    {
+      "micro": 1,
+      "complete_families": 4,
+      "task_ce": 1.4198074340820312,
+      "fra_loss": 1.112085223197937,
+      "combined": 2.531892776489258,
+      "losses_finite": true
+    },
+    {
+      "micro": 2,
+      "complete_families": 5,
+      "task_ce": 1.3497815132141113,
+      "fra_loss": 1.0771793127059937,
+      "combined": 2.4269609451293945,
+      "losses_finite": true
+    },
+    {
+      "micro": 3,
+      "complete_families": 5,
+      "task_ce": 1.2314051389694214,
+      "fra_loss": 1.108830213546753,
+      "combined": 2.3402352333068848,
+      "losses_finite": true
+    },
+    {
+      "micro": 4,
+      "complete_families": 4,
+      "task_ce": 1.361186146736145,
+      "fra_loss": 1.0935357809066772,
+      "combined": 2.4547219276428223,
+      "losses_finite": true
+    },
+    {
+      "micro": 5,
+      "complete_families": 5,
+      "task_ce": 1.4364972114562988,
+      "fra_loss": 1.12702476978302,
+      "combined": 2.5635218620300293,
+      "losses_finite": true
+    },
+    {
+      "micro": 6,
+      "complete_families": 5,
+      "task_ce": 1.2480931282043457,
+      "fra_loss": 1.096002459526062,
+      "combined": 2.3440957069396973,
+      "losses_finite": true
+    },
+    {
+      "micro": 7,
+      "complete_families": 4,
+      "task_ce": 1.321187973022461,
+      "fra_loss": 1.1254688501358032,
+      "combined": 2.4466567039489746,
+      "losses_finite": true
+    }
+  ],
+  "model_discarded": true,
+  "status": "PASS"
+}
