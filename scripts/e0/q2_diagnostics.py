@@ -1998,9 +1998,237 @@ def run_d4c(updates: int = 2000) -> dict:
     })
 
 
+# ------------------------------------------------------------------ D4-C1 ----
+
+D4C1_PROBE_UPDATES = (200, 400, 800)
+
+
+def run_d4c1_preflight() -> dict:
+    """D4-C1 preflight: rehearse the real FRA-ONLY branch (L = L_FRA applied,
+    task CE observed but never applied) for one effective update on a fresh C0.
+    Output is written OUTSIDE docs/ so the subsequent run records a literally
+    clean tree. Non-scientific; fail closed."""
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    hook = ClassifierDecideStateHook(model.classifier)
+
+    micro_reports = []
+    checks = {"captured_state_exists_and_attached": True}
+    optimizer.zero_grad(set_to_none=True)
+    batch_indices = stream.take(128)
+    for micro in range(GRAD_ACCUM):
+        rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+        ids, decide, labels = collate(rows, device)
+        step = _fc_fra_forward(model, hook, ids, decide, labels, rows, fam_of_sid)
+        checks["captured_state_exists_and_attached"] = (
+            checks["captured_state_exists_and_attached"] and step["captured_state_attached"]
+        )
+        # FRA-ONLY: the applied gradient is L_FRA; task CE is observed only.
+        (step["fra_loss"] / GRAD_ACCUM).backward()
+        micro_reports.append({
+            "micro": micro,
+            "complete_families": step["n_families"],
+            "task_ce_observed": float(step["task_loss"].detach()),
+            "fra_loss": float(step["fra_loss"].detach()),
+            "fra_finite": bool(torch.isfinite(step["fra_loss"])),
+        })
+    checks["min_complete_families"] = min(m["complete_families"] for m in micro_reports)
+    checks["all_microbatches_ge_3_families"] = checks["min_complete_families"] >= FRA_MIN_FAMILIES
+    checks["all_fra_finite"] = all(m["fra_finite"] for m in micro_reports)
+    checks["backward_grads_finite"] = all(
+        p.grad is not None and bool(torch.isfinite(p.grad).all())
+        for p in model.parameters() if p.grad is not None
+    )
+    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+    checks["grad_norm_finite"] = bool(torch.isfinite(grad_norm))
+    optimizer.step()
+    checks["optimizer_step_params_finite"] = all(
+        bool(torch.isfinite(p.data).all()) for p in model.parameters()
+    )
+    ok = all([
+        checks["captured_state_exists_and_attached"],
+        checks["all_microbatches_ge_3_families"],
+        checks["all_fra_finite"],
+        checks["backward_grads_finite"],
+        checks["grad_norm_finite"],
+        checks["optimizer_step_params_finite"],
+    ])
+    manifest = diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C1-PREFLIGHT-v0",
+        "authority": "issue #3 D4-C1 (FRA-only self-optimization) preflight; L = L_FRA applied, task CE observed only",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "effective_updates": 1,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == "",
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "output_location_note": "written under local_data (gitignored) so the D4-C1 run records a literally clean tree",
+        "checks": checks,
+        "microbatch_reports": micro_reports,
+        "model_discarded": True,
+        "status": "PASS" if ok else "FAIL",
+    })
+    del model, optimizer
+    torch.cuda.empty_cache()
+    return manifest
+
+
+def run_d4c1(updates: int = 800) -> dict:
+    """D4-C1 FRA-only self-optimization: one C0 arm, L = L_FRA only (exact D4-C
+    FRA definition), 800 updates, FC stream, otherwise unchanged production
+    recipe. Telemetry aggregates over all eight accumulation microbatches."""
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    raw_eval = [json.loads(line) for line in
+                (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl").open(encoding="utf-8")]
+    unseen_rows, unseen_digest = _d4a_probe_rows(raw_eval)
+    d3_train_rows, _d3_hold, d3_meta = d3_family_sets(raw_train)
+    d3_train_digest = d3_meta["train_family_list_sha256"]
+
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    tree_clean = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True,
+    ).stdout.strip() == ""
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    hook = ClassifierDecideStateHook(model.classifier)
+
+    telemetry: list[dict] = []
+    probes: dict[str, dict] = {}
+    fra_family_counts: list[int] = []
+
+    def capture(tag: str, update: int) -> None:
+        probes[tag] = {
+            "update": update,
+            "train_ID": _eval_surface_metrics(model, train_rows, device),
+            "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+            "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+            "train_family_geometry": _d3_probe_geometry(model, d3_train_rows, device),
+            "unseen_family_geometry": _d3_probe_geometry(model, unseen_rows, device),
+            "fra_loss_train_probe": _fra_loss_probe(model, hook, d3_train_rows, device),
+            "fra_loss_unseen_probe": _fra_loss_probe(model, hook, unseen_rows, device),
+        }
+        disp = probes[tag]["train_family_geometry"]["cross_family_displacement"]
+        mean_align = sum(
+            disp[name]["mean_pairwise_cos"]
+            for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+        ) / 3.0
+        print(
+            f"[D4C1 FRA-only] probe {tag}: trainFRA={probes[tag]['fra_loss_train_probe']:.4f} "
+            f"unseenFRA={probes[tag]['fra_loss_unseen_probe']:.4f} "
+            f"trainMeanAlign={mean_align:.4f} "
+            f"eval_ID={probes[tag]['eval_ID']['cmdr_sma']:.6f}",
+            flush=True,
+        )
+
+    torch.cuda.reset_peak_memory_stats(device)
+    capture("T0", 0)
+    started = time.time()
+    for update in range(1, updates + 1):
+        lr = learning_rate(update)
+        for group in optimizer.param_groups:
+            group["lr"] = lr
+        batch_indices = stream.take(128)
+        optimizer.zero_grad(set_to_none=True)
+        micro_fra, micro_task_observed = [], []
+        for micro in range(GRAD_ACCUM):
+            rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+            ids, decide, labels = collate(rows, device)
+            step = _fc_fra_forward(model, hook, ids, decide, labels, rows, fam_of_sid)
+            micro_fra.append(float(step["fra_loss"].detach()))
+            micro_task_observed.append(float(step["task_loss"].detach()))
+            fra_family_counts.append(step["n_families"])
+            # FRA-ONLY applied gradient
+            (step["fra_loss"] / GRAD_ACCUM).backward()
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+        optimizer.step()
+        if update <= 200 or update % 10 == 0:
+            telemetry.append({
+                "update": update, "lr": lr,
+                "update_mean_fra_loss": sum(micro_fra) / GRAD_ACCUM,
+                "update_mean_task_ce_observed": sum(micro_task_observed) / GRAD_ACCUM,
+                "grad_norm_pre_clip": float(grad_norm),
+            })
+        if update in D4C1_PROBE_UPDATES:
+            capture(f"T{update}", update)
+    wall = time.time() - started
+
+    final = probes[f"T{updates}"]
+    disp = final["train_family_geometry"]["cross_family_displacement"]
+    mean_align = sum(
+        disp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+    ) / 3.0
+    train_fra_loss = final["fra_loss_train_probe"]
+    if mean_align > 0.50 and train_fra_loss < 0.80:
+        endpoint = "FRA_SELF_OPTIMIZES"
+    elif mean_align < 0.25 and train_fra_loss >= 1.00:
+        endpoint = "FRA_SELF_OPTIMIZATION_FAILED"
+    else:
+        endpoint = "INCONCLUSIVE"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C1-FRA-ONLY-v0",
+        "authority": "issue #3 D4-C1 (FRA-only self-optimization); all other factors and v0.6 execution held; does not reopen v0.5 Q2",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "fra_config": {
+            "applied_loss": "L = L_FRA only (task CE observed, never applied)",
+            "lambda": None,
+            "residual_epsilon": FRA_EPS,
+            "prototype": "leave-one-family-out normalized mean of normalized residuals",
+            "temperature": None,
+            "min_complete_families_per_microbatch": FRA_MIN_FAMILIES,
+        },
+        "d3_train_probe_family_list_sha256": d3_train_digest,
+        "unseen_probe_family_list_sha256": unseen_digest,
+        "telemetry_semantics": "update_mean_fra_loss / update_mean_task_ce_observed are means over all 8 accumulation microbatches (corrects D4-C's last-microbatch logging)",
+        "endpoint_criteria": {
+            "FRA_SELF_OPTIMIZES": "T800 train mean alignment over {E-C,E-U,C-U} > 0.50 AND train FRA probe loss < 0.80",
+            "FRA_SELF_OPTIMIZATION_FAILED": "mean alignment < 0.25 AND train FRA probe loss >= 1.00",
+            "otherwise": "INCONCLUSIVE",
+        },
+        "final_train_mean_alignment": mean_align,
+        "final_train_fra_probe_loss": train_fra_loss,
+        "fra_contributing_family_counts": {
+            "min": min(fra_family_counts), "max": max(fra_family_counts),
+            "mean": sum(fra_family_counts) / len(fra_family_counts),
+            "microbatches": len(fra_family_counts),
+        },
+        "probes": probes,
+        "telemetry": telemetry,
+        "observed_endpoint": endpoint,
+        "wall_seconds": round(wall, 1),
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
@@ -2009,6 +2237,7 @@ def main() -> None:
     parser.add_argument("--d4b2-updates", type=int, default=2000)
     parser.add_argument("--d4b3-updates", type=int, default=8000)
     parser.add_argument("--d4c-updates", type=int, default=2000)
+    parser.add_argument("--d4c1-updates", type=int, default=800)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -2037,6 +2266,14 @@ def main() -> None:
         raise SystemExit(0 if manifest["status"] == "PASS" else 1)
     if args.mode in ("d4c", "all"):
         write_diag("d4c_family_residual_alignment.json", run_d4c(updates=args.d4c_updates))
+    if args.mode in ("d4c1-preflight", "all"):
+        manifest = run_d4c1_preflight()
+        D4C1_PREFLIGHT_OUT.parent.mkdir(parents=True, exist_ok=True)
+        D4C1_PREFLIGHT_OUT.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
+        print(f"wrote {D4C1_PREFLIGHT_OUT} (outside docs/ — tree stays literally clean)")
+        raise SystemExit(0 if manifest["status"] == "PASS" else 1)
+    if args.mode in ("d4c1", "all"):
+        write_diag("d4c1_fra_only.json", run_d4c1(updates=args.d4c1_updates))
 
 
 if __name__ == "__main__":
