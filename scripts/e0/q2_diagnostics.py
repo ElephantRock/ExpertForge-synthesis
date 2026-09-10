@@ -1662,9 +1662,241 @@ def run_d4b3(updates: int = 8000, prefix_updates: int = 2000) -> dict:
     })
 
 
+# ------------------------------------------------------------------- D4-C ----
+
+FRA_LAMBDA = 1.0
+FRA_EPS = 1e-6
+FRA_MIN_FAMILIES = 3
+
+
+class ClassifierDecideStateHook:
+    """Forward pre-hook on model.classifier capturing the post-final-RMSNorm
+    <DECIDE> state (the classifier's input). m0_model.py is NOT modified; the
+    captured tensor keeps its autograd graph so the FRA loss shares the task
+    graph and both losses get one combined backward per microbatch."""
+
+    def __init__(self, classifier: torch.nn.Module) -> None:
+        self.captured: dict = {"tensor": None, "active": False}
+        classifier.register_forward_pre_hook(self._hook)
+
+    def _hook(self, module, args):
+        if self.captured["active"]:
+            self.captured["tensor"] = args[0]
+        return None
+
+
+def _fra_loss_from_grouped(h: torch.Tensor) -> tuple[torch.Tensor, int]:
+    """FRA loss for h grouped family-major with per-family label order E/C/U
+    (shape (F,3,D)). Leave-one-family-out normalized prototypes; cross-entropy
+    of auxiliary logits against each slot's own label; no temperature."""
+    n_fam = h.shape[0]
+    r = h - h.mean(dim=1, keepdim=True)
+    z = r / torch.clamp(r.norm(dim=-1, keepdim=True), min=FRA_EPS)
+    total = z.sum(dim=0)  # (3, D)
+    mu = (total.unsqueeze(0) - z) / (n_fam - 1)  # (F, 3, D)
+    mu = F.normalize(mu, dim=-1)
+    logits = torch.einsum("fld,fkd->flk", z, mu)  # (F, 3, 3)
+    targets = torch.arange(3, device=h.device).unsqueeze(0).expand(n_fam, 3).reshape(-1)
+    return F.cross_entropy(logits.reshape(-1, 3), targets), n_fam
+
+
+def _fra_loss_microbatch(h: torch.Tensor, rows: list[dict], fam_of_sid: dict[str, str]) -> tuple[torch.Tensor, int]:
+    """Group a microbatch's captured <DECIDE> states by family (resolved via
+    fam_of_sid: production rows carry sample_id/label_id but not family_id);
+    use only complete E/C/U families wholly present. Fails closed on malformed
+    groups or fewer than FRA_MIN_FAMILIES contributing families."""
+    positions: dict[str, dict[int, int]] = {}
+    for pos, row in enumerate(rows):
+        positions.setdefault(fam_of_sid[row["sample_id"]], {})[row["label_id"]] = pos
+    ordered: list[tuple[str, list[int]]] = []
+    for fid, slots in positions.items():
+        if set(slots.keys()) == {0, 1, 2}:
+            ordered.append((fid, [slots[0], slots[1], slots[2]]))
+        elif len(slots) == 3:
+            raise AssertionError(f"malformed family group {fid}: 3 members, labels {sorted(slots)}")
+    if len(ordered) < FRA_MIN_FAMILIES:
+        raise AssertionError(
+            f"fail-closed: only {len(ordered)} complete families in microbatch (< {FRA_MIN_FAMILIES})"
+        )
+    idx = torch.tensor([p for _, slots in ordered for p in slots], device=h.device)
+    return _fra_loss_from_grouped(h.index_select(0, idx).view(len(ordered), 3, -1)), len(ordered)
+
+
+def _fra_loss_probe(model, hook: ClassifierDecideStateHook, rows: list[dict], device) -> float:
+    """Probe-time FRA loss over a complete 24-family set (single no-grad forward)."""
+    model.eval()
+    ids, decide, _ = collate(rows, device)
+    with torch.no_grad():
+        hook.captured["active"] = True
+        model(ids, decide)
+        hook.captured["active"] = False
+        h = hook.captured["tensor"]
+        loss, _ = _fra_loss_from_grouped(h.view(len(rows) // 3, 3, -1))
+    model.train()
+    return float(loss)
+
+
+def run_d4c(updates: int = 2000) -> dict:
+    """D4-C Family-Residual Alignment: paired FC-CE (control) vs FC-FRA
+    (task CE + lambda * FRA) on the family-coherent stream, 2,000 updates."""
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    raw_eval = [json.loads(line) for line in
+                (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl").open(encoding="utf-8")]
+    unseen_rows, unseen_digest = _d4a_probe_rows(raw_eval)
+    d3_train_rows, _d3_hold, d3_meta = d3_family_sets(raw_train)
+    d3_train_digest = d3_meta["train_family_list_sha256"]
+
+    fra_config = {
+        "lambda": FRA_LAMBDA,
+        "residual_epsilon": FRA_EPS,
+        "prototype": "leave-one-family-out normalized mean of normalized residuals",
+        "loss": "mean cross-entropy of auxiliary cosine logits a_{f,l,k}=z_{f,l}.mu_{-f,k} against slot label l",
+        "temperature": None,
+        "min_complete_families_per_microbatch": FRA_MIN_FAMILIES,
+        "state_capture": "forward pre-hook on classifier input (post-final-RMSNorm <DECIDE> state)",
+        "m0_model_modified": False,
+    }
+
+    arms: dict[str, dict] = {}
+    for arm in ("FC-CE", "FC-FRA"):
+        ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                               REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+        device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+        train_rows = ctx["train_rows"]
+        tree_clean = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == ""
+        fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+        sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+        fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+        stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+        hook = ClassifierDecideStateHook(model.classifier)
+
+        telemetry: list[dict] = []
+        probes: dict[str, dict] = {}
+        fra_family_counts: list[int] = []
+
+        def capture(tag: str, update: int) -> None:
+            probes[tag] = {
+                "update": update,
+                "train_ID": _eval_surface_metrics(model, train_rows, device),
+                "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+                "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+                "train_family_geometry": _d3_probe_geometry(model, d3_train_rows, device),
+                "unseen_family_geometry": _d3_probe_geometry(model, unseen_rows, device),
+                "fra_loss_train_probe": _fra_loss_probe(model, hook, d3_train_rows, device),
+                "fra_loss_unseen_probe": _fra_loss_probe(model, hook, unseen_rows, device),
+            }
+            print(
+                f"[D4C {arm}] probe {tag}: train SMA={probes[tag]['train_ID']['cmdr_sma']:.4f} "
+                f"eval_ID={probes[tag]['eval_ID']['cmdr_sma']:.6f} "
+                f"FRA(train)={probes[tag]['fra_loss_train_probe']:.4f} "
+                f"FRA(unseen)={probes[tag]['fra_loss_unseen_probe']:.4f}",
+                flush=True,
+            )
+
+        torch.cuda.reset_peak_memory_stats(device)
+        capture("T0", 0)
+        started = time.time()
+        for update in range(1, updates + 1):
+            lr = learning_rate(update)
+            for group in optimizer.param_groups:
+                group["lr"] = lr
+            batch_indices = stream.take(128)
+            optimizer.zero_grad(set_to_none=True)
+            for micro in range(GRAD_ACCUM):
+                rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+                ids, decide, labels = collate(rows, device)
+                if arm == "FC-FRA":
+                    hook.captured["active"] = True
+                logits = model(ids, decide)
+                hook.captured["active"] = False
+                task_loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+                if arm == "FC-FRA":
+                    fra, n_fam = _fra_loss_microbatch(hook.captured["tensor"], rows, fam_of_sid)
+                    fra_family_counts.append(n_fam)
+                    combined = task_loss + FRA_LAMBDA * fra
+                else:
+                    fra = None
+                    combined = task_loss
+                (combined / GRAD_ACCUM).backward()
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            optimizer.step()
+            if update <= 200 or update % 10 == 0:
+                entry = {
+                    "update": update, "lr": lr,
+                    "batch_task_ce_mean": float(task_loss),
+                    "grad_norm_pre_clip": float(grad_norm),
+                }
+                if arm == "FC-FRA":
+                    entry["batch_fra_loss"] = float(fra)
+                    entry["fra_complete_families"] = n_fam
+                telemetry.append(entry)
+            if update % 400 == 0:
+                capture(f"T{update}", update)
+        wall = time.time() - started
+
+        arms[arm] = {
+            "working_tree_clean_at_start": tree_clean,
+            "parameter_count": sum(p.numel() for p in model.parameters()),
+            "telemetry": telemetry,
+            "probes": probes,
+            "wall_seconds": round(wall, 1),
+            "cuda_peak_allocated_bytes": int(torch.cuda.max_memory_allocated(device)),
+            "fra_contributing_family_counts": (
+                {"min": min(fra_family_counts), "max": max(fra_family_counts),
+                 "mean": sum(fra_family_counts) / len(fra_family_counts),
+                 "microbatches": len(fra_family_counts)}
+                if fra_family_counts else None
+            ),
+        }
+        del model, optimizer
+        torch.cuda.empty_cache()
+
+    def align(arm_name: str, probe: str, which: str) -> float:
+        return arms[arm_name]["probes"][probe][f"{which}_family_geometry"][
+            "cross_family_displacement"
+        ]["E_minus_C"]["mean_pairwise_cos"]
+
+    train_aligned = align("FC-FRA", "T2000", "train") > 0.5
+    unseen_aligned = align("FC-FRA", "T2000", "unseen") > 0.25
+    eval_moving = arms["FC-FRA"]["probes"]["T2000"]["eval_ID"]["cmdr_sma"] > 0.40
+    if not train_aligned:
+        pattern = "FRA_OBJECTIVE_FAILED"
+    elif unseen_aligned or eval_moving:
+        pattern = "OBJECTIVE_PRESSURE_SUPPORTED"
+    else:
+        pattern = "PRESSURE_ABSORBED_BY_MEMORIZATION"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C-FAMILY-RESIDUAL-ALIGNMENT-v0",
+        "authority": "issue #3 D4-C (Family-Residual Alignment falsifier); all other factors and v0.6 execution held; does not reopen v0.5 Q2",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": arms["FC-FRA"]["parameter_count"],
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "fra_config": fra_config,
+        "d3_train_probe_family_list_sha256": d3_train_digest,
+        "unseen_probe_family_list_sha256": unseen_digest,
+        "pattern_criteria": {
+            "train_aligned": "FC-FRA train-probe E-C mean pairwise cosine at T2000 > 0.5",
+            "unseen_aligned": "FC-FRA unseen-probe E-C mean pairwise cosine at T2000 > 0.25 (D3-aligned threshold)",
+            "eval_moving": "FC-FRA eval_ID SMA at T2000 > 0.40",
+        },
+        "arms": arms,
+        "observed_pattern": pattern,
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
@@ -1672,6 +1904,7 @@ def main() -> None:
     parser.add_argument("--d4b-updates", type=int, default=2000)
     parser.add_argument("--d4b2-updates", type=int, default=2000)
     parser.add_argument("--d4b3-updates", type=int, default=8000)
+    parser.add_argument("--d4c-updates", type=int, default=2000)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -1694,6 +1927,8 @@ def main() -> None:
         write_diag("d4b2_matched_permutation_control.json", run_d4b2(updates=args.d4b2_updates))
     if args.mode in ("d4b3", "all"):
         write_diag("d4b3_fc_8k.json", run_d4b3(updates=args.d4b3_updates))
+    if args.mode in ("d4c", "all"):
+        write_diag("d4c_family_residual_alignment.json", run_d4c(updates=args.d4c_updates))
 
 
 if __name__ == "__main__":
