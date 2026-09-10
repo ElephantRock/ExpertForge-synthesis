@@ -1,0 +1,52 @@
+{
+  "diagnostic_only": true,
+  "non_scientific": true,
+  "git_commit": "aa7a62a384b54ada8e8ca2a17864e9cda4b2c00a",
+  "branch": "e0/q2-unqualified-diagnostics",
+  "runtime_snapshot_sha256": "238a881ae5e30d464b8fed7858232b81357af9a9634bac5ad6257474072cb556",
+  "generated_utc": "2026-09-10T19:18:23Z",
+  "authority": "issue #3 D4-C2 (effective-batch prototype support) preflight; two-pass exact-VJP construction validated before the 800-update arm",
+  "schema_id": "E0-Q2-DIAG-D4C2-PREFLIGHT-v0",
+  "candidate": "C0",
+  "seed": 1647674144,
+  "effective_updates": 1,
+  "wd_scope": "exclude_norm_bias",
+  "working_tree_clean_at_start": true,
+  "code_git_commit": "aa7a62a384b54ada8e8ca2a17864e9cda4b2c00a",
+  "parameter_count": 53232643,
+  "verified_q1_input_digests": {
+    "train_ID.jsonl": "79daa2c007bc914e228a0312d8278b8f5ca7cb2c28f1450d508f9924362aacf1",
+    "eval_ID.jsonl": "b66b6629173449f71022fba0e7907826733aa7ae28e0b7502716ba4fdd45fce8",
+    "eval_STRUCT.jsonl": "688865d27b8e1fd208b2b453670306d1b4ecc9ff9a21130a297e67cc4b07c7d8",
+    "CMDR-Lex-v1.json": "c3d44e7a99163456ef149fdd1b1caf2fd694e8412e6f082480cb05c2ef237471"
+  },
+  "output_location_note": "written under local_data (gitignored) so the D4-C2 run records a literally clean tree",
+  "checks": {
+    "gradient_equivalence": true,
+    "gradient_equivalence_detail": {
+      "families_in_case": 5,
+      "direct_loss": 1.1054091453552246,
+      "proxy_loss": 1.1054091453552246,
+      "loss_diff": 0.0,
+      "max_param_grad_abs_diff": 1.0132789611816406e-05,
+      "worst_parameter": "embed_tokens.weight",
+      "worst_relative_l2_diff": 4.086685775753347e-05,
+      "min_gradient_cosine": 0.9999998807907104,
+      "equivalent": true,
+      "tolerance": {
+        "worst_relative_l2": 0.0001,
+        "min_cosine": 0.999999
+      },
+      "tolerance_rationale": "float32 autograd accumulation-order noise between direct and two-pass backward (measured worst rel 4.1e-05, cos >= 0.99999988)"
+    },
+    "full_batch_complete_families": 42,
+    "fragment_examples": 2,
+    "fra_loss_finite": true,
+    "vjp_nonzero_finite": true,
+    "vjp_norm": 0.7499373555183411,
+    "grad_norm_finite": true,
+    "optimizer_step_params_finite": true
+  },
+  "model_discarded": true,
+  "status": "PASS"
+}
