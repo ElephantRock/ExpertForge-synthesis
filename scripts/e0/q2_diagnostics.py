@@ -2001,6 +2001,9 @@ def run_d4c(updates: int = 2000) -> dict:
 # ------------------------------------------------------------------ D4-C1 ----
 
 D4C1_PROBE_UPDATES = (200, 400, 800)
+D4C1_PREFLIGHT_OUT = (
+    REPO_ROOT / "local_data" / "e0_qualification_bootstrap" / "DIAG" / "d4c1_preflight.json"
+)
 
 
 def run_d4c1_preflight() -> dict:

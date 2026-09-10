@@ -1,0 +1,17 @@
+{
+  "schema_id": "E0-D4C1-PREFLIGHT-INCIDENT-v0",
+  "incident_id": "d4c1_preflight_incident_001",
+  "classification": "DIAGNOSTIC_PREFLIGHT_OUTPUT_INVALID",
+  "attempted_code_commit": "10731d6cdad7838843a785852bbbf28509a699d6",
+  "authority_classification": "issue #3 D4-C1 remediation release",
+  "arm": "d4c1-preflight (FRA-only rehearsal)",
+  "d4c1_800_update_arm_started": false,
+  "preflight_manifest_emitted": false,
+  "exception_type": "NameError",
+  "exception_symbol": "D4C1_PREFLIGHT_OUT",
+  "root_cause": "the D4-C1 function insertion dropped the one-line D4C1_PREFLIGHT_OUT constant definition while the d4c1-preflight CLI branch references it; the FRA-only rehearsal itself completed (P1 verified, no fail-closed assertion raised) and the crash occurred at the manifest write step",
+  "verification_gap": "the new CLI mode was compiled but never executed before Commit Q; the preflight invocation was its first execution and failed fast (~3 min) exactly as the preflight pattern intends",
+  "remediation": "single-line constant definition added; working-tree end-to-end preflight executed and PASSED (artifact discarded); no changes to FRA math, thresholds, probes, seed, stream, model, optimizer, LR schedule, or telemetry semantics",
+  "console_log_local_path": "local_data/e0_qualification_bootstrap/DIAG/d4c1_preflight_crash_001.log",
+  "console_log_sha256": "19db394850584eaa9aae1f4833dce701e795ce127bfcb5890b8cf76e96edf35e"
+}
