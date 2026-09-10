@@ -1,5 +1,17 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-C1 FRA-only self-optimization — COMPLETE: `FRA_SELF_OPTIMIZATION_FAILED` (lineage: code `8aadbdc` = Commit Q2 → evidence in this commit)
+
+**Incident d4c1_preflight_incident_001 (`DIAGNOSTIC_PREFLIGHT_OUTPUT_INVALID`)**: Commit Q (`10731d6...`) omitted the one-line `D4C1_PREFLIGHT_OUT` constant; the first preflight invocation crashed at the manifest-write step after the FRA-only rehearsal itself had completed (no manifest emitted, 800-update arm never started, no evidence). Remediated per the authority's release as Commit Q2 (`8aadbdced328721a008f63e5ff6658c92fd0232d`): constant added, working-tree preflight executed end-to-end (PASS, artifact discarded), incident JSON binds the crash log by SHA-256. **Authoritative preflight from literally-clean Q2: PASS**, bound to the full Q2 SHA with `working_tree_clean_at_start = true`; preflight output remained under gitignored `local_data` until this evidence commit.
+
+**D4-C1 result (one C0 arm, 800 updates, L = L_FRA only, FC stream, otherwise unchanged recipe; telemetry now records means over all 8 accumulation microbatches):**
+- Training microbatch FRA loss never leaves the ln(3) band: 1.106 (u=1) → 1.081 (u=100) → 1.079 (u=400) → 1.091 (u=800) — the objective does not optimize itself under the exact 4–5-family microbatch regime (mean 4.667 families/microbatch across 6,400 microbatches; min 4, never violating the ≥3 rule).
+- Train-probe FRA loss: 1.117 → 1.132; train mean alignment over {E−C, E−U, C−U}: −0.0028 → **−0.0051** (never leaves the T0 baseline); unseen FRA 1.089–1.173; eval_ID exactly 0.333333 at every probe.
+- Endpoint per the frozen criteria: mean alignment −0.0051 < 0.25 AND train FRA loss 1.132 ≥ 1.00 → **`FRA_SELF_OPTIMIZATION_FAILED`**.
+
+**Per the D4-C1 release rule, λ tuning is explicitly NOT the next step; prototype support / cosine-temperature mechanics become the leading target** — with FRA unable to self-optimize even alone, the failure localizes to the objective's mechanics at this batch scale (leave-one-out prototypes over 4–5 families are noise-dominated targets; unit-normalized cosine logits without temperature give near-zero gradient in the symmetric basin) rather than to task/FRA gradient interference. Q2 remains UNQUALIFIED; Q3, corpus generation, v0.6 execution, and all λ/temperature/prototype-support/architecture/optimizer/LR perturbations remain **held** pending Commit R review.
+
+
 ## D4-C Family-Residual Alignment — COMPLETE after remediation: `FRA_OBJECTIVE_FAILED` (lineage: code `531c593` = Commit O2 → evidence in this commit)
 
 **Incident d4c_launch_incident_001 (DIAGNOSTIC_INVALID_PRE_UPDATE)**: the first pair attempt from defective Commit O (`dc5a9b6...`) crashed at FC-FRA update 0 on a nested-tuple return in `_fra_loss_microbatch`; zero optimizer steps, no evidence; classified and remediated per the authority's release. Commit O2 (`531c5930d97530d9b2d20502b8e320bea1106fda`) contains only the flattening fix with a scalar-finite-tensor assertion, a shared `_fc_fra_forward` used verbatim by loop and preflight, and `run_d4c_preflight` (real FC-FRA branch, one effective update, fresh C0, discarded). A second external interruption (task killed mid-FC-CE ~T1600, no evidence) delayed the rerun; the aborted log is bound by SHA-256 in the incident JSON. The completed FC-CE arm from the aborted pair was NOT accepted as evidence per the release.
