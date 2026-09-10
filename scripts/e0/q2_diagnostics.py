@@ -1719,7 +1719,113 @@ def _fra_loss_microbatch(h: torch.Tensor, rows: list[dict], fam_of_sid: dict[str
             f"fail-closed: only {len(ordered)} complete families in microbatch (< {FRA_MIN_FAMILIES})"
         )
     idx = torch.tensor([p for _, slots in ordered for p in slots], device=h.device)
-    return _fra_loss_from_grouped(h.index_select(0, idx).view(len(ordered), 3, -1)), len(ordered)
+    loss, _ = _fra_loss_from_grouped(h.index_select(0, idx).view(len(ordered), 3, -1))
+    assert torch.is_tensor(loss) and loss.dim() == 0 and bool(torch.isfinite(loss)), (
+        "FRA loss must be a finite scalar tensor"
+    )
+    return loss, len(ordered)
+
+
+def _fc_fra_forward(model, hook: ClassifierDecideStateHook, ids, decide, labels,
+                    rows: list[dict], fam_of_sid: dict[str, str]) -> dict:
+    """One FC-FRA forward/loss computation, shared verbatim by the D4-C
+    training loop and the D4-C preflight (so the preflight rehearses the exact
+    production branch). Does NOT backward — call sites own that."""
+    hook.captured["active"] = True
+    logits = model(ids, decide)
+    hook.captured["active"] = False
+    h = hook.captured["tensor"]
+    task_loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
+    fra, n_fam = _fra_loss_microbatch(h, rows, fam_of_sid)
+    return {
+        "task_loss": task_loss,
+        "fra_loss": fra,
+        "n_families": n_fam,
+        "combined": task_loss + FRA_LAMBDA * fra,
+        "captured_state_attached": h is not None and h.requires_grad,
+    }
+
+
+def run_d4c_preflight() -> dict:
+    """D4-C preflight (remediation for d4c_launch_incident_001): execute the
+    real FC-FRA training branch end-to-end for ONE effective update on a
+    freshly constructed C0, then discard it. Non-scientific; fail closed."""
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    hook = ClassifierDecideStateHook(model.classifier)
+
+    micro_reports = []
+    checks = {"captured_state_exists_and_attached": True}
+    optimizer.zero_grad(set_to_none=True)
+    batch_indices = stream.take(128)
+    for micro in range(GRAD_ACCUM):
+        rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
+        ids, decide, labels = collate(rows, device)
+        step = _fc_fra_forward(model, hook, ids, decide, labels, rows, fam_of_sid)
+        checks["captured_state_exists_and_attached"] = (
+            checks["captured_state_exists_and_attached"] and step["captured_state_attached"]
+        )
+        (step["combined"] / GRAD_ACCUM).backward()
+        micro_reports.append({
+            "micro": micro,
+            "complete_families": step["n_families"],
+            "task_ce": float(step["task_loss"].detach()),
+            "fra_loss": float(step["fra_loss"].detach()),
+            "combined": float(step["combined"].detach()),
+            "losses_finite": bool(torch.isfinite(step["combined"])),
+        })
+    checks["min_complete_families"] = min(m["complete_families"] for m in micro_reports)
+    checks["all_microbatches_ge_3_families"] = checks["min_complete_families"] >= FRA_MIN_FAMILIES
+    checks["all_losses_finite"] = all(m["losses_finite"] for m in micro_reports)
+    checks["backward_succeeded"] = all(
+        p.grad is not None and bool(torch.isfinite(p.grad).all())
+        for p in model.parameters() if p.grad is not None
+    )
+    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+    checks["grad_norm_finite"] = bool(torch.isfinite(grad_norm))
+    optimizer.step()
+    checks["optimizer_step_params_finite"] = all(
+        bool(torch.isfinite(p.data).all()) for p in model.parameters()
+    )
+    ok = all([
+        checks["captured_state_exists_and_attached"],
+        checks["all_microbatches_ge_3_families"],
+        checks["all_losses_finite"],
+        checks["backward_succeeded"],
+        checks["grad_norm_finite"],
+        checks["optimizer_step_params_finite"],
+    ])
+    manifest = diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C-PREFLIGHT-v0",
+        "authority": "issue #3 D4-C remediation (DIAGNOSTIC_INVALID_PRE_UPDATE / d4c_launch_incident_001); rehearses the real FC-FRA branch",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "effective_updates": 1,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == "",
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "fra_config_reference": "frozen in d4c manifest; lambda=1.0, eps=1e-6, no temperature",
+        "checks": checks,
+        "microbatch_reports": micro_reports,
+        "model_discarded": True,
+        "status": "PASS" if ok else "FAIL",
+    })
+    del model, optimizer
+    torch.cuda.empty_cache()
+    return manifest
 
 
 def _fra_loss_probe(model, hook: ClassifierDecideStateHook, rows: list[dict], device) -> float:
@@ -1810,15 +1916,13 @@ def run_d4c(updates: int = 2000) -> dict:
                 rows = [train_rows[i] for i in batch_indices[micro * MICROBATCH : (micro + 1) * MICROBATCH]]
                 ids, decide, labels = collate(rows, device)
                 if arm == "FC-FRA":
-                    hook.captured["active"] = True
-                logits = model(ids, decide)
-                hook.captured["active"] = False
-                task_loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
-                if arm == "FC-FRA":
-                    fra, n_fam = _fra_loss_microbatch(hook.captured["tensor"], rows, fam_of_sid)
+                    step = _fc_fra_forward(model, hook, ids, decide, labels, rows, fam_of_sid)
+                    task_loss, fra, n_fam = step["task_loss"], step["fra_loss"], step["n_families"]
                     fra_family_counts.append(n_fam)
-                    combined = task_loss + FRA_LAMBDA * fra
+                    combined = step["combined"]
                 else:
+                    logits = model(ids, decide)
+                    task_loss = F.cross_entropy(logits, labels, label_smoothing=0.0)
                     fra = None
                     combined = task_loss
                 (combined / GRAD_ACCUM).backward()
@@ -1896,7 +2000,7 @@ def run_d4c(updates: int = 2000) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
@@ -1927,6 +2031,10 @@ def main() -> None:
         write_diag("d4b2_matched_permutation_control.json", run_d4b2(updates=args.d4b2_updates))
     if args.mode in ("d4b3", "all"):
         write_diag("d4b3_fc_8k.json", run_d4b3(updates=args.d4b3_updates))
+    if args.mode in ("d4c-preflight", "all"):
+        manifest = run_d4c_preflight()
+        write_diag("d4c_preflight.json", manifest)
+        raise SystemExit(0 if manifest["status"] == "PASS" else 1)
     if args.mode in ("d4c", "all"):
         write_diag("d4c_family_residual_alignment.json", run_d4c(updates=args.d4c_updates))
 

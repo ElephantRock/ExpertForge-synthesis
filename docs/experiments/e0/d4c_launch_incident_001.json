@@ -1,0 +1,22 @@
+{
+  "schema_id": "E0-D4C-LAUNCH-INCIDENT-v0",
+  "incident_id": "d4c_launch_incident_001",
+  "classification": "DIAGNOSTIC_INVALID_PRE_UPDATE",
+  "attempted_code_commit": "dc5a9b6a2eda3dd1d94cd3debaea96798b5d69e4",
+  "arm": "FC-FRA",
+  "optimizer_steps_completed": 0,
+  "d4c_result_emitted": false,
+  "exception_type": "TypeError",
+  "exception_detail": "can't multiply sequence by non-int of type 'float' at task_loss + FRA_LAMBDA * fra",
+  "root_cause": "_fra_loss_microbatch returned the nested tuple ((loss, n_fam_from_grouped), count) because _fra_loss_from_grouped already returns (loss, n_fam); the FC-FRA call site unpacked two values, leaving fra as the inner tuple",
+  "verification_gap": "pre-commit test unpacked the outer tuple and asserted loss == loss, which is True for a tuple; the FC-FRA training branch had never executed end-to-end before Commit O (same never-executed-branch class as q2_c0_launch_incident_001)",
+  "fc_ce_arm_state": "completed 2,000 updates and reproduced the known FC trajectory exactly; NOT accepted as D4-C evidence per remediation release — operational observation only",
+  "console_log_local_path": "local_data/e0_qualification_bootstrap/DIAG/d4c_aborted_pair_001.log",
+  "console_log_sha256": "3850961374ac170b0c13acfe5a16e927b17f7ac6c7cc156ad3b858812338f371",
+  "remediation": {
+    "fix": "flatten _fra_loss_microbatch to return (loss_tensor, contributing_family_count) with a scalar-finite-tensor assertion",
+    "preflight": "run_d4c_preflight executes the real FC-FRA branch (shared _fc_fra_forward) for one effective update on a fresh C0 and discards it; checks captured-state attachment, >=3 complete families per microbatch, loss finiteness, backward, accumulated gradients, grad norm, optimizer step, and post-step parameter finiteness",
+    "unchanged": "FRA formula, lambda=1.0, eps=1e-6, min-family rule, model, stream, optimizer, LR schedule, batch geometry, probes, m0_model.py"
+  },
+  "remediation_reference": "issue #3 D4-C remediation release (DIAGNOSTIC_INVALID_PRE_UPDATE)"
+}
