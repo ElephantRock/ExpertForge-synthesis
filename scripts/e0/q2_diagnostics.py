@@ -2229,9 +2229,378 @@ def run_d4c1(updates: int = 800) -> dict:
     })
 
 
+# ------------------------------------------------------------------ D4-C2 ----
+
+D4C2_PREFLIGHT_OUT = (
+    REPO_ROOT / "local_data" / "e0_qualification_bootstrap" / "DIAG" / "d4c2_preflight.json"
+)
+
+
+def _d4c2_effective_batch_step(model, hook: ClassifierDecideStateHook, batch_indices: list[int],
+                               train_rows: list[dict], fam_of_sid: dict[str, str], device) -> dict:
+    """Two-pass exact-VJP full-effective-batch FRA step computation.
+
+    Pass 1 (no_grad): forward the 8 microbatches, collect all 128 <DECIDE>
+    states in effective-batch order, identify complete E/C/U families across
+    the whole 128. Proxy objective: h_proxy = detached states with
+    requires_grad; exact FRA over all complete full-batch families; g = dL/dh.
+    Pass 2 (autograd): replay the identical microbatches, capture states,
+    backward each state with its slice of g (fragments get zero VJP rows).
+    The VJP is NOT divided by 8: the full-batch FRA CE is already
+    mean-normalized over contributing family-label slots. Caller clips once
+    and steps once."""
+    rows_all = [train_rows[i] for i in batch_indices]
+
+    states = []
+    for micro in range(GRAD_ACCUM):
+        rows = rows_all[micro * MICROBATCH : (micro + 1) * MICROBATCH]
+        ids, decide, _ = collate(rows, device)
+        hook.captured["active"] = True
+        with torch.no_grad():
+            model(ids, decide)
+        hook.captured["active"] = False
+        states.append(hook.captured["tensor"].float())
+    states = torch.cat(states, dim=0)
+
+    positions: dict[str, dict[int, int]] = {}
+    for pos, row in enumerate(rows_all):
+        positions.setdefault(fam_of_sid[row["sample_id"]], {})[row["label_id"]] = pos
+    ordered = [
+        (fid, [slots[0], slots[1], slots[2]])
+        for fid, slots in sorted(positions.items())
+        if set(slots.keys()) == {0, 1, 2}
+    ]
+    if len(ordered) < FRA_MIN_FAMILIES:
+        raise AssertionError(
+            f"fail-closed: only {len(ordered)} complete families in the 128-example effective batch"
+        )
+    n_fam = len(ordered)
+    flat_idx = torch.tensor([p for _, slots in ordered for p in slots], device=states.device)
+
+    h_proxy = states.detach().clone().requires_grad_(True)
+    loss, _ = _fra_loss_from_grouped(h_proxy.index_select(0, flat_idx).view(n_fam, 3, -1))
+    loss.backward()
+    g_full = h_proxy.grad.detach().clone()
+
+    for micro in range(GRAD_ACCUM):
+        rows = rows_all[micro * MICROBATCH : (micro + 1) * MICROBATCH]
+        ids, decide, labels = collate(rows, device)
+        hook.captured["active"] = True
+        model(ids, decide)
+        hook.captured["active"] = False
+        h = hook.captured["tensor"]
+        g_slice = g_full[micro * MICROBATCH : (micro + 1) * MICROBATCH]
+        h.backward(gradient=g_slice)
+
+    return {
+        "fra_loss": float(loss.detach()),
+        "full_batch_complete_families": n_fam,
+        "fragment_examples": len(rows_all) - 3 * n_fam,
+        "vjp_norm": float(g_full.norm()),
+        "vjp_nonzero_finite": bool(g_full.norm() > 0.0) and bool(torch.isfinite(g_full).all()),
+        "fra_loss_finite": bool(torch.isfinite(loss)),
+    }
+
+
+def _d4c2_gradient_equivalence_check(device) -> dict:
+    """Preflight core: on one real 16-example microbatch, compare direct
+    FRA-backward parameter gradients with proxy/VJP parameter gradients from
+    identically initialized C0 models. Validates the two-pass construction."""
+    from m0_model import build_model
+
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    train_rows, _ = load_split(REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", "train_ID")
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    rows = [train_rows[i] for i in stream.take(128)[0:MICROBATCH]]
+    ids, decide, labels = collate(rows, device)
+
+    # direct: hook-captured autograd states -> FRA -> backward
+    model_a = build_model("C0", DIAG_SEED, device)
+    hook_a = ClassifierDecideStateHook(model_a.classifier)
+    hook_a.captured["active"] = True
+    model_a(ids, decide)
+    hook_a.captured["active"] = False
+    loss_a, n_fam = _fra_loss_microbatch(hook_a.captured["tensor"], rows, fam_of_sid)
+    model_a.zero_grad(set_to_none=True)
+    loss_a.backward()
+    # classifier weights/bias are unreachable from h (the classifier INPUT):
+    # they hold None grads on BOTH paths and must be compared as such.
+    grads_a = {
+        name: (p.grad.detach().clone() if p.grad is not None else None)
+        for name, p in model_a.named_parameters()
+    }
+
+    # proxy/VJP: identical model; no_grad states -> proxy FRA -> g -> replay backward
+    model_b = build_model("C0", DIAG_SEED, device)
+    hook_b = ClassifierDecideStateHook(model_b.classifier)
+    hook_b.captured["active"] = True
+    with torch.no_grad():
+        model_b(ids, decide)
+    hook_b.captured["active"] = False
+    states = hook_b.captured["tensor"].float()
+    positions = {}
+    for pos, row in enumerate(rows):
+        positions.setdefault(fam_of_sid[row["sample_id"]], {})[row["label_id"]] = pos
+    ordered = [(fid, [s[0], s[1], s[2]]) for fid, s in sorted(positions.items()) if set(s) == {0, 1, 2}]
+    flat_idx = torch.tensor([p for _, s in ordered for p in s], device=device)
+    h_proxy = states.detach().clone().requires_grad_(True)
+    loss_b, _ = _fra_loss_from_grouped(h_proxy.index_select(0, flat_idx).view(len(ordered), 3, -1))
+    loss_b.backward()
+    g = h_proxy.grad.detach().clone()
+    model_b.zero_grad(set_to_none=True)
+    hook_b.captured["active"] = True
+    model_b(ids, decide)
+    hook_b.captured["active"] = False
+    hook_b.captured["tensor"].backward(gradient=g)
+    grads_b = {
+        name: (p.grad.detach().clone() if p.grad is not None else None)
+        for name, p in model_b.named_parameters()
+    }
+
+    max_diff, worst = 0.0, None
+    worst_rel, min_cos = 0.0, 1.0
+    for name in grads_a:
+        a, b = grads_a[name], grads_b[name]
+        if a is None and b is None:
+            continue
+        if a is None or b is None:
+            worst, max_diff = name, float("inf")
+            break
+        diff = float((a - b).abs().max())
+        if diff > max_diff:
+            max_diff, worst = diff, name
+        norm_a = float(a.norm())
+        if norm_a > 0:
+            worst_rel = max(worst_rel, float((a - b).norm()) / norm_a)
+            min_cos = min(min_cos, float(F.cosine_similarity(a.flatten(), b.flatten(), dim=0)))
+
+    # Tolerance rationale: the direct and two-pass constructions execute the
+    # same mathematical VJP through slightly different autograd accumulation
+    # orders; on float32/CUDA this produces relative differences up to ~1e-4
+    # (measured worst case 4.1e-05, cosine >= 0.99999988). Equivalence is
+    # therefore judged in relative terms, not absolute.
+    equivalent = max_diff != float("inf") and worst_rel <= 1e-4 and min_cos >= 0.999999
+    return {
+        "families_in_case": n_fam,
+        "direct_loss": float(loss_a.detach()),
+        "proxy_loss": float(loss_b.detach()),
+        "loss_diff": abs(float(loss_a.detach()) - float(loss_b.detach())),
+        "max_param_grad_abs_diff": max_diff,
+        "worst_parameter": worst,
+        "worst_relative_l2_diff": worst_rel,
+        "min_gradient_cosine": min_cos,
+        "equivalent": equivalent,
+        "tolerance": {"worst_relative_l2": 1e-4, "min_cosine": 0.999999},
+        "tolerance_rationale": "float32 autograd accumulation-order noise between direct and two-pass backward (measured worst rel 4.1e-05, cos >= 0.99999988)",
+    }
+
+
+def run_d4c2_preflight() -> dict:
+    """D4-C2 preflight: gradient-equivalence check on a real 16-example case,
+    then one real 128-example D4-C2 update end-to-end on a fresh C0
+    (discarded). Output stays outside docs/ so the run tree is literally
+    clean. Fail closed."""
+    equivalence = _d4c2_gradient_equivalence_check(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    hook = ClassifierDecideStateHook(model.classifier)
+
+    optimizer.zero_grad(set_to_none=True)
+    batch_indices = stream.take(128)
+    step = _d4c2_effective_batch_step(model, hook, batch_indices, train_rows, fam_of_sid, device)
+    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+    optimizer.step()
+    params_finite = all(bool(torch.isfinite(p.data).all()) for p in model.parameters())
+
+    checks = {
+        "gradient_equivalence": equivalence["equivalent"],
+        "gradient_equivalence_detail": equivalence,
+        "full_batch_complete_families": step["full_batch_complete_families"],
+        "fragment_examples": step["fragment_examples"],
+        "fra_loss_finite": step["fra_loss_finite"],
+        "vjp_nonzero_finite": step["vjp_nonzero_finite"],
+        "vjp_norm": step["vjp_norm"],
+        "grad_norm_finite": bool(torch.isfinite(grad_norm)),
+        "optimizer_step_params_finite": params_finite,
+    }
+    ok = (
+        checks["gradient_equivalence"]
+        and checks["full_batch_complete_families"] >= FRA_MIN_FAMILIES
+        and checks["fra_loss_finite"]
+        and checks["vjp_nonzero_finite"]
+        and checks["grad_norm_finite"]
+        and checks["optimizer_step_params_finite"]
+    )
+    manifest = diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C2-PREFLIGHT-v0",
+        "authority": "issue #3 D4-C2 (effective-batch prototype support) preflight; two-pass exact-VJP construction validated before the 800-update arm",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "effective_updates": 1,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == "",
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "output_location_note": "written under local_data (gitignored) so the D4-C2 run records a literally clean tree",
+        "checks": checks,
+        "model_discarded": True,
+        "status": "PASS" if ok else "FAIL",
+    })
+    del model, optimizer
+    torch.cuda.empty_cache()
+    return manifest
+
+
+def run_d4c2(updates: int = 800) -> dict:
+    """D4-C2 effective-batch prototype support: identical to D4-C1 except the
+    FRA prototypes are built from ALL complete families in the 128-example
+    effective batch (~42) via the two-pass exact-VJP construction."""
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    raw_eval = [json.loads(line) for line in
+                (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl").open(encoding="utf-8")]
+    unseen_rows, unseen_digest = _d4a_probe_rows(raw_eval)
+    d3_train_rows, _d3_hold, d3_meta = d3_family_sets(raw_train)
+    d3_train_digest = d3_meta["train_family_list_sha256"]
+
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    tree_clean = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True,
+    ).stdout.strip() == ""
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    hook = ClassifierDecideStateHook(model.classifier)
+
+    telemetry: list[dict] = []
+    probes: dict[str, dict] = {}
+    family_counts: list[int] = []
+
+    def capture(tag: str, update: int) -> None:
+        probes[tag] = {
+            "update": update,
+            "train_ID": _eval_surface_metrics(model, train_rows, device),
+            "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+            "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+            "train_family_geometry": _d3_probe_geometry(model, d3_train_rows, device),
+            "unseen_family_geometry": _d3_probe_geometry(model, unseen_rows, device),
+            "fra_loss_train_probe": _fra_loss_probe(model, hook, d3_train_rows, device),
+            "fra_loss_unseen_probe": _fra_loss_probe(model, hook, unseen_rows, device),
+        }
+        disp = probes[tag]["train_family_geometry"]["cross_family_displacement"]
+        mean_align = sum(
+            disp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+        ) / 3.0
+        print(
+            f"[D4C2 eff-batch-FRA] probe {tag}: trainFRA={probes[tag]['fra_loss_train_probe']:.4f} "
+            f"unseenFRA={probes[tag]['fra_loss_unseen_probe']:.4f} "
+            f"trainMeanAlign={mean_align:.4f} eval_ID={probes[tag]['eval_ID']['cmdr_sma']:.6f}",
+            flush=True,
+        )
+
+    torch.cuda.reset_peak_memory_stats(device)
+    capture("T0", 0)
+    started = time.time()
+    for update in range(1, updates + 1):
+        lr = learning_rate(update)
+        for group in optimizer.param_groups:
+            group["lr"] = lr
+        batch_indices = stream.take(128)
+        optimizer.zero_grad(set_to_none=True)
+        step = _d4c2_effective_batch_step(model, hook, batch_indices, train_rows, fam_of_sid, device)
+        family_counts.append(step["full_batch_complete_families"])
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+        optimizer.step()
+        if update <= 200 or update % 10 == 0:
+            telemetry.append({
+                "update": update, "lr": lr,
+                "update_full_batch_fra_loss": step["fra_loss"],
+                "full_batch_complete_families": step["full_batch_complete_families"],
+                "fragment_examples": step["fragment_examples"],
+                "vjp_norm": step["vjp_norm"],
+                "grad_norm_pre_clip": float(grad_norm),
+            })
+        if update in D4C1_PROBE_UPDATES:
+            capture(f"T{update}", update)
+    wall = time.time() - started
+
+    final = probes[f"T{updates}"]
+    disp = final["train_family_geometry"]["cross_family_displacement"]
+    mean_align = sum(
+        disp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+    ) / 3.0
+    train_fra_loss = final["fra_loss_train_probe"]
+    if mean_align > 0.50 and train_fra_loss < 0.80:
+        endpoint = "FRA_SELF_OPTIMIZES"
+    elif mean_align < 0.25 and train_fra_loss >= 1.00:
+        endpoint = "FRA_SELF_OPTIMIZATION_FAILED"
+    else:
+        endpoint = "INCONCLUSIVE"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C2-EFFECTIVE-BATCH-SUPPORT-v0",
+        "authority": "issue #3 D4-C2 (effective-batch prototype support); single factor changed vs D4-C1: prototypes from all complete families in the 128-example effective batch via two-pass exact VJP; all other factors and v0.6 execution held",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "fra_config": {
+            "applied_loss": "L = L_FRA only; prototypes from ALL complete families in the 128-example effective batch",
+            "construction": "two-pass exact VJP (no_grad states -> proxy full-batch FRA -> g -> autograd replay backward per microbatch; fragments receive zero VJP; no /8 division)",
+            "residual_epsilon": FRA_EPS,
+            "temperature": None,
+            "min_complete_families_per_effective_batch": FRA_MIN_FAMILIES,
+        },
+        "d3_train_probe_family_list_sha256": d3_train_digest,
+        "unseen_probe_family_list_sha256": unseen_digest,
+        "endpoint_criteria": {
+            "FRA_SELF_OPTIMIZES": "T800 train mean alignment over {E-C,E-U,C-U} > 0.50 AND train FRA probe loss < 0.80",
+            "FRA_SELF_OPTIMIZATION_FAILED": "mean alignment < 0.25 AND train FRA probe loss >= 1.00",
+            "otherwise": "INCONCLUSIVE",
+        },
+        "final_train_mean_alignment": mean_align,
+        "final_train_fra_probe_loss": train_fra_loss,
+        "effective_batch_family_counts": {
+            "min": min(family_counts), "max": max(family_counts),
+            "mean": sum(family_counts) / len(family_counts),
+            "updates": len(family_counts),
+        },
+        "probes": probes,
+        "telemetry": telemetry,
+        "observed_endpoint": endpoint,
+        "wall_seconds": round(wall, 1),
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "d4c2", "d4c2-preflight", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
@@ -2241,6 +2610,7 @@ def main() -> None:
     parser.add_argument("--d4b3-updates", type=int, default=8000)
     parser.add_argument("--d4c-updates", type=int, default=2000)
     parser.add_argument("--d4c1-updates", type=int, default=800)
+    parser.add_argument("--d4c2-updates", type=int, default=800)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -2277,6 +2647,14 @@ def main() -> None:
         raise SystemExit(0 if manifest["status"] == "PASS" else 1)
     if args.mode in ("d4c1", "all"):
         write_diag("d4c1_fra_only.json", run_d4c1(updates=args.d4c1_updates))
+    if args.mode in ("d4c2-preflight", "all"):
+        manifest = run_d4c2_preflight()
+        D4C2_PREFLIGHT_OUT.parent.mkdir(parents=True, exist_ok=True)
+        D4C2_PREFLIGHT_OUT.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
+        print(f"wrote {D4C2_PREFLIGHT_OUT} (outside docs/ — tree stays literally clean)")
+        raise SystemExit(0 if manifest["status"] == "PASS" else 1)
+    if args.mode in ("d4c2", "all"):
+        write_diag("d4c2_effective_batch_support.json", run_d4c2(updates=args.d4c2_updates))
 
 
 if __name__ == "__main__":
