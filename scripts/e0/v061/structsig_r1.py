@@ -34,6 +34,7 @@ import hashlib
 import json
 
 _BRANCH_CAP = 5000
+_WALL_GUARD_SECONDS = 10.0
 
 
 def _h(*parts) -> str:
@@ -44,6 +45,12 @@ def _h(*parts) -> str:
 
 class _BranchCapExceeded(RuntimeError):
     pass
+
+
+class _WallGuardExceeded(RuntimeError):
+    """Per-family wall-clock guard: a family whose IR search exceeds the
+    guard is reported as IR_EXPENSIVE and excluded from measurement — never
+    silently returned with a non-exact form."""
 
 
 def _extract(example: dict):
@@ -222,7 +229,14 @@ def _search(colors, facts, rules, query, depth, budget):
     """IR search: refine; if discrete serialize; else branch on the smallest
     non-singleton cell. Bulk-safe cells (interchangeable members — identical
     masked-edge multisets) are individualized in one branch; only genuinely
-    ambiguous cells branch."""
+    ambiguous cells branch. The budget list carries [branch_cap_remaining,
+    deadline_monotonic]; exceeding either raises (never returns non-exact)."""
+    import time as _time
+
+    if _time.monotonic() > budget[1]:
+        raise _WallGuardExceeded(
+            f"IR wall guard {_WALL_GUARD_SECONDS:.0f}s exceeded for one variant"
+        )
     colors = _refine(colors, facts, rules, query)
     cells: dict[str, list] = {}
     for node, c in colors.items():
@@ -255,9 +269,11 @@ def _search(colors, facts, rules, query, depth, budget):
 
 def variant_canonical(example: dict) -> str:
     """Exact canonical serialization of ONE variant (pivot binding included)."""
+    import time as _time
+
     facts, rules, query, depth, preds, ents = _extract(example)
     colors = _initial_colors(preds, ents, query)
-    budget = [_BRANCH_CAP]
+    budget = [_BRANCH_CAP, _time.monotonic() + _WALL_GUARD_SECONDS]
     leaves = _search(colors, facts, rules, query, depth, budget)
     return min(leaves)
 

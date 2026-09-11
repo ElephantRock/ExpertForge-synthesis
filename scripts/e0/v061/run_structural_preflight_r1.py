@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import math
 import random
@@ -214,27 +215,39 @@ def main() -> None:
             variant_digest_seen: set[str] = set()
             cell_t0 = time.time()
             ir_cap_failures = 0
+            ir_wall_excluded = []
             for fam in families:
                 verifier_errors += verify_family(fam)
                 verifier_errors += counterfactual_invariance(fam)
                 try:
-                    fc = structsig_r1.family_canonical(fam["variants"])
-                    sig = structsig_r1.family_signature(fam["variants"])
+                    reps = sorted(structsig_r1.variant_canonical(v) for v in fam["variants"])
+                    fc = json.dumps(
+                        {"v": "CMDR-StructSig-v1-r1-family", "orbit": reps},
+                        sort_keys=True, separators=(",", ":"),
+                    )
+                    sig = hashlib.sha256(fc.encode("utf-8")).hexdigest()
                 except structsig_r1._BranchCapExceeded:
                     ir_cap_failures += 1
                     continue
+                except structsig_r1._WallGuardExceeded:
+                    ir_wall_excluded.append(fam["family_index"])
+                    continue
                 sigs.append(sig)
                 fam_canonicals.setdefault(sig, []).append(fc)
-                for v in fam["variants"]:
-                    variant_digest_seen.add(structsig_r1.variant_digest(v))
+                variant_digest_seen.update(hashlib.sha256(r.encode("utf-8")).hexdigest() for r in reps)
                 cross_cell.setdefault(sig, []).append(key)
             print(
                 f"[{key}] signatures done in {(time.time()-cell_t0)/60:.1f} min "
-                f"(IR-cap failures: {ir_cap_failures})",
+                f"(IR-cap: {ir_cap_failures}, wall-excluded: {len(ir_wall_excluded)})",
                 flush=True,
             )
             if ir_cap_failures:
                 failures.append(f"IR branch cap exceeded for {ir_cap_failures} families in {key}")
+            if ir_wall_excluded:
+                failures.append(
+                    f"IR wall guard excluded {len(ir_wall_excluded)} families in {key} "
+                    f"(indices {ir_wall_excluded[:10]}...)"
+                )
 
             # repeated-signature groups: every member must have identical FULL
             # canonical serialization (string equality, not digest equality)
@@ -275,6 +288,8 @@ def main() -> None:
                 "attempted": n,
                 "accepted_complete": len(families),
                 "ir_cap_failures": ir_cap_failures,
+                "ir_wall_excluded_count": len(ir_wall_excluded),
+                "ir_wall_excluded_indices": ir_wall_excluded[:20],
                 "verifier_errors": len(verifier_errors),
                 "unique_family_signatures": len(sig_counts),
                 "multiplicity_distribution": dict(Counter(sig_counts.values())),
