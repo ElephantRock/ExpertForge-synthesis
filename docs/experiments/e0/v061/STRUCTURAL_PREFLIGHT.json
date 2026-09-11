@@ -1,0 +1,295 @@
+{
+  "schema_id": "E0-V061-STRUCTURAL-PREFLIGHT-v0",
+  "authority": "V06_MECHANISM_BOOTSTRAP_AUTHORIZED; authority work order: structural feasibility before 402k materialization",
+  "bootstrap_only": true,
+  "model_scoring_performed": false,
+  "pilot_namespace": "ExpertForge-E0-v061-msel-preflight",
+  "pilot_namespace_burned": true,
+  "authoritative_msel_materialization_performed": false,
+  "code_git_commit": "cfe0840144f3e2cd5c9d397c3db71f840b7ca732",
+  "working_tree_clean_at_start": true,
+  "families_per_depth_per_surface": 2000,
+  "per_cell": {
+    "ID|d1": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "unique_structsigs": 1120,
+      "duplicate_signature_groups": 324,
+      "collisions": 880,
+      "multiplicity_distribution": {
+        "2": 140,
+        "1": 796,
+        "3": 60,
+        "9": 7,
+        "7": 12,
+        "4": 42,
+        "10": 3,
+        "8": 3,
+        "5": 32,
+        "11": 2,
+        "6": 16,
+        "14": 2,
+        "12": 3,
+        "15": 1,
+        "18": 1
+      },
+      "verifier_errors": 0,
+      "effective_signature_space_lower_bound": null
+    },
+    "ID|d2": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "unique_structsigs": 1014,
+      "duplicate_signature_groups": 327,
+      "collisions": 986,
+      "multiplicity_distribution": {
+        "5": 22,
+        "1": 687,
+        "2": 139,
+        "9": 8,
+        "18": 1,
+        "7": 14,
+        "13": 1,
+        "4": 30,
+        "15": 3,
+        "8": 5,
+        "12": 4,
+        "3": 64,
+        "10": 8,
+        "6": 23,
+        "11": 3,
+        "14": 2
+      },
+      "verifier_errors": 0,
+      "effective_signature_space_lower_bound": null
+    },
+    "ID|d3": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "unique_structsigs": 876,
+      "duplicate_signature_groups": 318,
+      "collisions": 1124,
+      "multiplicity_distribution": {
+        "10": 8,
+        "18": 1,
+        "7": 13,
+        "1": 558,
+        "12": 4,
+        "5": 27,
+        "4": 38,
+        "2": 107,
+        "3": 63,
+        "6": 19,
+        "14": 2,
+        "11": 9,
+        "9": 9,
+        "8": 11,
+        "15": 1,
+        "13": 3,
+        "19": 1,
+        "16": 2
+      },
+      "verifier_errors": 0,
+      "effective_signature_space_lower_bound": null
+    },
+    "ID|d4": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "unique_structsigs": 744,
+      "duplicate_signature_groups": 304,
+      "collisions": 1256,
+      "multiplicity_distribution": {
+        "1": 440,
+        "3": 62,
+        "10": 8,
+        "15": 1,
+        "4": 43,
+        "9": 7,
+        "16": 2,
+        "5": 31,
+        "2": 76,
+        "7": 22,
+        "6": 19,
+        "26": 1,
+        "11": 7,
+        "8": 6,
+        "18": 2,
+        "14": 3,
+        "17": 3,
+        "22": 1,
+        "24": 1,
+        "12": 6,
+        "13": 3
+      },
+      "verifier_errors": 0,
+      "effective_signature_space_lower_bound": null
+    },
+    "STRUCT|d1": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "unique_structsigs": 1323,
+      "duplicate_signature_groups": 287,
+      "collisions": 677,
+      "multiplicity_distribution": {
+        "1": 1036,
+        "2": 136,
+        "4": 32,
+        "5": 27,
+        "3": 56,
+        "10": 4,
+        "7": 8,
+        "8": 3,
+        "6": 16,
+        "9": 5
+      },
+      "verifier_errors": 0,
+      "effective_signature_space_lower_bound": null
+    },
+    "STRUCT|d2": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "unique_structsigs": 1176,
+      "duplicate_signature_groups": 295,
+      "collisions": 824,
+      "multiplicity_distribution": {
+        "2": 118,
+        "4": 35,
+        "1": 881,
+        "7": 7,
+        "9": 7,
+        "3": 73,
+        "14": 2,
+        "5": 18,
+        "6": 17,
+        "8": 7,
+        "17": 1,
+        "11": 1,
+        "16": 1,
+        "13": 2,
+        "12": 3,
+        "10": 3
+      },
+      "verifier_errors": 0,
+      "effective_signature_space_lower_bound": null
+    },
+    "STRUCT|d3": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "unique_structsigs": 1000,
+      "duplicate_signature_groups": 295,
+      "collisions": 1000,
+      "multiplicity_distribution": {
+        "7": 14,
+        "3": 53,
+        "1": 705,
+        "5": 24,
+        "6": 20,
+        "2": 105,
+        "13": 6,
+        "4": 36,
+        "8": 10,
+        "12": 3,
+        "9": 8,
+        "10": 7,
+        "11": 7,
+        "17": 1,
+        "14": 1
+      },
+      "verifier_errors": 0,
+      "effective_signature_space_lower_bound": null
+    },
+    "STRUCT|d4": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "unique_structsigs": 751,
+      "duplicate_signature_groups": 275,
+      "collisions": 1249,
+      "multiplicity_distribution": {
+        "2": 80,
+        "6": 21,
+        "26": 1,
+        "8": 9,
+        "4": 32,
+        "11": 6,
+        "13": 3,
+        "12": 6,
+        "1": 476,
+        "5": 26,
+        "7": 15,
+        "10": 7,
+        "14": 3,
+        "25": 2,
+        "22": 2,
+        "9": 10,
+        "15": 4,
+        "17": 2,
+        "3": 42,
+        "20": 2,
+        "23": 1,
+        "21": 1
+      },
+      "verifier_errors": 0,
+      "effective_signature_space_lower_bound": null
+    }
+  },
+  "renaming_stability_tests": [
+    {
+      "base_signature": "02a0b6767c2acd5ad688826a6b72efff7dddd58d9c8a831a1ae920b4dc1c9f83",
+      "renamed_signature": "02a0b6767c2acd5ad688826a6b72efff7dddd58d9c8a831a1ae920b4dc1c9f83",
+      "stable_under_nuisance_renaming": true
+    },
+    {
+      "base_signature": "3fa764638103fa82e898cd296e85e28918ef22eb84cd491e1448ad9b5ab7d662",
+      "renamed_signature": "3fa764638103fa82e898cd296e85e28918ef22eb84cd491e1448ad9b5ab7d662",
+      "stable_under_nuisance_renaming": true
+    },
+    {
+      "base_signature": "92c054648b6d7de0d3b1f19d86dce39512b488cb31f735cce885c783729d8fe9",
+      "renamed_signature": "92c054648b6d7de0d3b1f19d86dce39512b488cb31f735cce885c783729d8fe9",
+      "stable_under_nuisance_renaming": true
+    },
+    {
+      "base_signature": "00f34707ba070344e832edb6b2aca93080521acb357a6c36da910d1bbdd970e4",
+      "renamed_signature": "00f34707ba070344e832edb6b2aca93080521acb357a6c36da910d1bbdd970e4",
+      "stable_under_nuisance_renaming": true
+    },
+    {
+      "base_signature": "41fe2c6be26a271b7aa860481a9e51e582addac3f6de6d94485e293fafa84aab",
+      "renamed_signature": "41fe2c6be26a271b7aa860481a9e51e582addac3f6de6d94485e293fafa84aab",
+      "stable_under_nuisance_renaming": true
+    },
+    {
+      "base_signature": "3e57fc76c481c18811beef5df3cdbacb17893fd567e29a5cefc56a78166714f9",
+      "renamed_signature": "3e57fc76c481c18811beef5df3cdbacb17893fd567e29a5cefc56a78166714f9",
+      "stable_under_nuisance_renaming": true
+    },
+    {
+      "base_signature": "165601b78d3e86b302af0ab9b8cd423a07a7d9c5b53d9217041bab7dd8352a6f",
+      "renamed_signature": "165601b78d3e86b302af0ab9b8cd423a07a7d9c5b53d9217041bab7dd8352a6f",
+      "stable_under_nuisance_renaming": true
+    },
+    {
+      "base_signature": "7bed65294fe5c384a9279d74816b08da4a7cbbf31ec1afb40a8da74562959452",
+      "renamed_signature": "7bed65294fe5c384a9279d74816b08da4a7cbbf31ec1afb40a8da74562959452",
+      "stable_under_nuisance_renaming": true
+    }
+  ],
+  "cross_cell_ambiguity_count": 0,
+  "determinism_mismatches": 0,
+  "projected_burn_per_cell": 32000,
+  "exhaustion_risk": {
+    "ID|d1": "UNBOUNDED_COLony_OBSERVED_COLLISIONS",
+    "ID|d2": "UNBOUNDED_COLony_OBSERVED_COLLISIONS",
+    "ID|d3": "UNBOUNDED_COLony_OBSERVED_COLLISIONS",
+    "ID|d4": "UNBOUNDED_COLony_OBSERVED_COLLISIONS",
+    "STRUCT|d1": "UNBOUNDED_COLony_OBSERVED_COLLISIONS",
+    "STRUCT|d2": "UNBOUNDED_COLony_OBSERVED_COLLISIONS",
+    "STRUCT|d3": "UNBOUNDED_COLony_OBSERVED_COLLISIONS",
+    "STRUCT|d4": "UNBOUNDED_COLony_OBSERVED_COLLISIONS"
+  },
+  "failures": [
+    "collisions observed at pilot scale: {'ID|d1': 'UNBOUNDED_COLony_OBSERVED_COLLISIONS', 'ID|d2': 'UNBOUNDED_COLony_OBSERVED_COLLISIONS', 'ID|d3': 'UNBOUNDED_COLony_OBSERVED_COLLISIONS', 'ID|d4': 'UNBOUNDED_COLony_OBSERVED_COLLISIONS', 'STRUCT|d1': 'UNBOUNDED_COLony_OBSERVED_COLLISIONS', 'STRUCT|d2': 'UNBOUNDED_COLony_OBSERVED_COLLISIONS', 'STRUCT|d3': 'UNBOUNDED_COLony_OBSERVED_COLLISIONS', 'STRUCT|d4': 'UNBOUNDED_COLony_OBSERVED_COLLISIONS'}"
+  ],
+  "status": "FAIL",
+  "wall_seconds": 662.4
+}
