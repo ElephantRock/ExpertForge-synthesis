@@ -212,19 +212,29 @@ def main() -> None:
             sigs = []
             fam_canonicals: dict[str, list[str]] = {}
             variant_digest_seen: set[str] = set()
-            try:
-                for fam in families:
-                    verifier_errors += verify_family(fam)
-                    verifier_errors += counterfactual_invariance(fam)
+            cell_t0 = time.time()
+            ir_cap_failures = 0
+            for fam in families:
+                verifier_errors += verify_family(fam)
+                verifier_errors += counterfactual_invariance(fam)
+                try:
                     fc = structsig_r1.family_canonical(fam["variants"])
                     sig = structsig_r1.family_signature(fam["variants"])
-                    sigs.append(sig)
-                    fam_canonicals.setdefault(sig, []).append(fc)
-                    for v in fam["variants"]:
-                        variant_digest_seen.add(structsig_r1.variant_digest(v))
-                    cross_cell.setdefault(sig, []).append(key)
-            except structsig_r1._BranchCapExceeded as exc:
-                failures.append(f"IR branch cap exceeded in {key}: {exc}")
+                except structsig_r1._BranchCapExceeded:
+                    ir_cap_failures += 1
+                    continue
+                sigs.append(sig)
+                fam_canonicals.setdefault(sig, []).append(fc)
+                for v in fam["variants"]:
+                    variant_digest_seen.add(structsig_r1.variant_digest(v))
+                cross_cell.setdefault(sig, []).append(key)
+            print(
+                f"[{key}] signatures done in {(time.time()-cell_t0)/60:.1f} min "
+                f"(IR-cap failures: {ir_cap_failures})",
+                flush=True,
+            )
+            if ir_cap_failures:
+                failures.append(f"IR branch cap exceeded for {ir_cap_failures} families in {key}")
 
             # repeated-signature groups: every member must have identical FULL
             # canonical serialization (string equality, not digest equality)
@@ -264,6 +274,7 @@ def main() -> None:
             per_cell[key] = {
                 "attempted": n,
                 "accepted_complete": len(families),
+                "ir_cap_failures": ir_cap_failures,
                 "verifier_errors": len(verifier_errors),
                 "unique_family_signatures": len(sig_counts),
                 "multiplicity_distribution": dict(Counter(sig_counts.values())),
