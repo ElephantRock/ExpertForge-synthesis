@@ -1,0 +1,160 @@
+registry_id: E0-v0.6.1-PRETRAINED-STUDENT-CANDIDATES
+registry_version: 0.2-candidate
+prepared: 2026-09-11
+status: CANDIDATE_NOT_FROZEN
+purpose: >-
+  Finite pretrained-student candidate registry for the v0.6.1 mechanism-selection
+  stage. This registry must be frozen before any CMDR-MSEL-v0 model scoring.
+  Candidate additions or substitutions after scoring require a new contract revision.
+
+governance:
+  contract: EXPERIMENT_E0_EXPERTISE_ADAPTER_UTILITY_CONTRACT_v0.6.1-candidate.md
+  scoring_authorized: false
+  bootstrap_authorized: false
+  candidate_growth_after_scoring: prohibited
+  selection_by_cmdr_score_before_registry_freeze: prohibited
+
+candidate_policy:
+  count: 1
+  rationale: >-
+    Use one compact base pretrained causal model to minimize candidate-shopping
+    freedom while remaining in the same order of magnitude as the v0.5 C0 student.
+    The candidate retains its native tokenizer as part of the treatment.
+  lm_head_policy: remove_upstream_lm_head
+  task_head: linear_hidden_to_3_with_bias
+  tokenizer_policy: retain_native_tokenizer
+  tokenizer_remapping: prohibited
+  truncation: prohibited
+  instruction_tuned_candidates: prohibited
+
+candidates:
+  - candidate_id: P0-70M
+    upstream_provider: EleutherAI
+    upstream_id: EleutherAI/pythia-70m
+    upstream_revision: a39f36b100fe8a5377810d56c3f4789b9c53ac42
+    upstream_revision_hex_length: 40
+    revision_resolution_observed: true
+    source_urls:
+      model_card: https://huggingface.co/EleutherAI/pythia-70m
+      tree_pinned: https://huggingface.co/EleutherAI/pythia-70m/tree/a39f36b100fe8a5377810d56c3f4789b9c53ac42
+      config: https://huggingface.co/EleutherAI/pythia-70m/blob/main/config.json
+      weights_pinned: https://huggingface.co/EleutherAI/pythia-70m/blob/a39f36b100fe8a5377810d56c3f4789b9c53ac42/model.safetensors
+    license_observed: Apache-2.0
+    model_class: GPT-NeoX causal language model
+    pretraining_class: base_pretrained_not_instruction_tuned
+    upstream_training_data_class: The Pile
+    architecture_observed:
+      hidden_size: 512
+      num_hidden_layers: 6
+      num_attention_heads: 8
+      intermediate_size: 2048
+      max_position_embeddings: 2048
+      vocab_size: 50304
+      rotary_emb_base: 10000
+      rotary_pct: 0.25
+      hidden_act: gelu
+      parallel_residual: true
+      tie_word_embeddings: false
+
+    artifact_identity:
+      model_safetensors_sha256_observed: ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15
+      model_safetensors_sha256_local_verified: QUAL_BOUND
+      exact_snapshot_manifest_sha256: QUAL_BOUND
+      tokenizer_json_sha256: QUAL_BOUND
+      tokenizer_config_json_sha256: QUAL_BOUND
+      special_tokens_map_json_sha256: QUAL_BOUND
+      config_json_sha256: QUAL_BOUND
+      license_record_sha256: QUAL_BOUND
+
+    downstream_classification_form:
+      retained_components:
+        - token_embeddings
+        - transformer_backbone
+        - final_norm
+      removed_components:
+        - upstream_lm_head
+      added_components:
+        - linear_512_to_3_classifier_with_bias
+      expected_backbone_without_lm_head_params: 44670976
+      expected_task_classifier_params: 1539
+      expected_total_classification_params: 44672515
+      exact_instantiated_parameter_count: QUAL_BOUND
+
+    mechanism_cells:
+      P-FROZEN:
+        execution: primary_unconditional
+        backbone_initialization: pretrained
+        backbone_trainable: false
+        task_head_trainable: true
+        train_slice: R1
+        optimizer_recipe: P-FROZEN
+
+      P-RANDOM-FROZEN:
+        execution: conditional_if_P-FROZEN_TRANSFER_PASS
+        backbone_initialization: random_from_frozen_upstream_config
+        backbone_trainable: false
+        task_head_trainable: true
+        train_slice: R1
+        optimizer_recipe: P-FROZEN
+        eligibility_as_final_student: false
+
+      P-FT@R1:
+        execution: primary_unconditional
+        backbone_initialization: pretrained
+        backbone_trainable: true
+        task_head_trainable: true
+        train_slice: R1
+        optimizer_recipe: P-FT
+
+      P-RANDOM@R1:
+        execution: primary_unconditional
+        backbone_initialization: random_from_frozen_upstream_config
+        backbone_trainable: true
+        task_head_trainable: true
+        train_slice: R1
+        optimizer_recipe: P-FT
+        interpretation_scope: matched_P0_architecture_tokenizer_PFT_recipe_only
+
+      P-FT@R16:
+        execution: >-
+          conditional_if_R1_R4_R16_P-RANDOM@R1_all_NO_TRANSFER_and_P-FT@R1_NO_TRANSFER
+        backbone_initialization: pretrained
+        backbone_trainable: true
+        task_head_trainable: true
+        train_slice: R16
+        optimizer_recipe: P-FT
+
+pre_execution_requirements:
+  - independently download and verify exact pinned snapshot
+  - verify local model.safetensors SHA-256 matches observed upstream SHA-256
+  - compute and freeze config/tokenizer/special-token/snapshot digests
+  - verify license/provenance record
+  - instantiate classification form and verify exact parameter count
+  - verify canonical CMDR rendered strings tokenize without invalid encodings
+  - verify complete CMDR-MSEL-v0 token-length distribution
+  - verify max P0 sequence length <= 384 native tokens
+  - verify no truncation
+  - verify terminal answer-cue state extraction identity
+  - verify deterministic seed-bound random initialization for P-RANDOM cells
+  - verify 12 GiB accelerator feasibility without model/optimizer offload
+  - verify 400-update wall-clock smoke projection <= 8 h full-run ceiling
+
+claim_language:
+  allowed:
+    - pretraining_treatment_supported_within_matched_P0_recipe
+    - pretrained_frozen_linear_readout_viable
+    - matched_P0_architecture_tokenizer_recipe_sufficient
+  prohibited:
+    - representation_prior_proven
+    - equal_compute_R_vs_P
+    - parameter_matched_R_vs_P
+    - pretraining_generally_required
+
+notes:
+  - >-
+    The revision string has 40 hexadecimal characters and resolves upstream.
+    The observed safetensors SHA-256 is reported by the upstream file pointer,
+    but bootstrap must independently verify the downloaded bytes before freeze.
+  - >-
+    P0-70M was chosen for design comparability, not because upstream benchmark
+    results predict CMDR performance.

@@ -1,0 +1,69 @@
+{
+  "schema_id": "E0-V06-MECHANISM-BOOTSTRAP-AUTHORIZATION-v1",
+  "experiment_id": "E0",
+  "contract_version": "v0.6.1-candidate",
+  "action": "V06_MECHANISM_BOOTSTRAP_AUTHORIZED",
+  "status": "AUTHORIZED",
+  "issued_at_utc": "2026-09-11T19:15:46Z",
+  "authority_role": "PROJECT_CONTRACT_AUTHORITY:chat-user",
+  "audit_ruling": {
+    "design_audit": "CLOSED_ACCEPTED_FOR_BOOTSTRAP",
+    "remediation_incident": "V06-DESIGN-REMEDIATION-1",
+    "remediation_result": "ACCEPTED",
+    "known_defect_original_decision_program": "REJECTED_FOR_AUTHORITY",
+    "original_decision_program_sha256": "8fef40ef4450c970de6491ba0600aa25ed03a609323c5ffddc39633fef6ffcaa",
+    "remediated_decision_program_sha256_reported": "ab2fb6f69948f50aa44a1ae0b53a9f6949084ca9f30f4be7fc388c5a8d1efb54",
+    "remediated_manifest_sha256_reported": "b6fc9ba7f832cc44d5e8a2a5ce72ac19a72f121721d3d341076f6a9e1e28a023",
+    "remediation_oracle": {
+      "assignments_checked": 245,
+      "outcome_counts": {
+        "MULTIPLE_VIABLE": 131,
+        "RANDOM_BASE_VIABLE": 16,
+        "IN_DOMAIN_ALLOCATION_VIABLE": 32,
+        "P0_RANDOM_VIABLE": 16,
+        "PRETRAINED_VIABLE": 17,
+        "NEITHER_SUFFICIENT": 1,
+        "INCONCLUSIVE": 32
+      },
+      "targeted_regression": "PASS"
+    },
+    "verification_note": "The remediated Windows-side files were not mounted in the assistant runtime at authorization time. Their SHA-256 values and self-test results are operator-attested and must be independently recomputed from the authoritative files before MECHANISM_SELECTION_EXECUTION_RELEASED."
+  },
+  "frozen_design_bindings": {
+    "contract_sha256": "a70a910e2781fe5c37d625f5474032efaba32855d16446412eb590d55caf7e5b",
+    "pretrained_candidate_registry_sha256": "a3e4444c8e9b93e62652ff4c044a9efaf1fa06e853310d4e10e9f9e101c5b860",
+    "report_schema_sha256": "933731003536c4fb91318ad44abb830e917eb3e1ed00b2f71ef83bac67ce8100",
+    "registry_state": "FROZEN_FOR_V06_MECHANISM_BOOTSTRAP",
+    "mechanism_selection_spec_state": "FIXED_FOR_BOOTSTRAP"
+  },
+  "authorized_scope": [
+    "CMDR-MSEL-v0 generator extensions and corpus materialization",
+    "independent proof verification",
+    "CMDR-StructSig-v1 implementation",
+    "structural-support/depletion audit",
+    "leakage and shortcut audits",
+    "exact P0 snapshot/digest/license/interface capture",
+    "metric/sampler/decision implementation from the frozen v0.6.1 mechanism-selection specification",
+    "token-length and resource smoke tests",
+    "deterministic replay validators",
+    "frozen reporting schemas/manifests"
+  ],
+  "explicitly_not_authorized": [
+    "R/P evidence scoring",
+    "comparison-only seed scoring",
+    "v0.6 student qualification",
+    "Q3/source qualification",
+    "final E0 corpus generation",
+    "A0 or downstream E0 evidence",
+    "architecture experiments",
+    "Engram/HCM implementation",
+    "contract-science changes",
+    "threshold changes",
+    "seed changes"
+  ],
+  "execution_release_gate": "MECHANISM_SELECTION_EXECUTION_RELEASED remains required. All Section 17 pre-execution blocking items must be frozen and PASS, including independent recomputation of the authoritative decision-program digest.",
+  "historical_boundary": {
+    "v0.5_q2": "CLOSED_UNQUALIFIED",
+    "reopened": false
+  }
+}

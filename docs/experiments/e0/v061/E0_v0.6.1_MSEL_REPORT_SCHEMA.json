@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "E0-v0.6.1-MSEL-REPORT-v0",
+  "title": "ExpertForge E0 v0.6.1 Mechanism Selection Evidence Report",
+  "type": "object",
+  "required": [
+    "schema_id",
+    "contract_sha256",
+    "code_sha256",
+    "runtime_snapshot_sha256",
+    "regime_id",
+    "master_seed",
+    "run_status",
+    "dataset_digests",
+    "parameter_count",
+    "trainable_parameter_count",
+    "resource",
+    "metrics"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "E0-v0.6.1-MSEL-REPORT-v0"
+    },
+    "contract_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "code_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "runtime_snapshot_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "regime_id": {
+      "type": "string"
+    },
+    "master_seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "rng_substreams": {
+      "type": "object",
+      "required": [
+        "backbone_init",
+        "classifier_init",
+        "data_order",
+        "dataloader_workers"
+      ],
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 2147483647
+      }
+    },
+    "run_status": {
+      "enum": [
+        "VALID",
+        "INVALID_CONTRACT",
+        "INVALID_INFRASTRUCTURE",
+        "DIVERGED_SCIENTIFIC",
+        "REPLAY_MISMATCH"
+      ]
+    },
+    "attempt_id": {
+      "type": "string"
+    },
+    "incident_parent": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "working_tree_clean_at_start": {
+      "type": "boolean"
+    },
+    "repository_commit": {
+      "type": "string"
+    },
+    "dataset_digests": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "model_identity": {
+      "type": "object"
+    },
+    "parameter_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "trainable_parameter_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "selected_checkpoint_update": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "selected_checkpoint_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "final_checkpoint_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "Q",
+        "Q_ID",
+        "Q_STRUCT",
+        "Q_2_4",
+        "minimum_label_recall"
+      ],
+      "properties": {
+        "Q": {
+          "type": "number"
+        },
+        "Q_ID": {
+          "type": "number"
+        },
+        "Q_STRUCT": {
+          "type": "number"
+        },
+        "Q_2_4": {
+          "type": "number"
+        },
+        "minimum_label_recall": {
+          "type": "number"
+        },
+        "per_depth_accuracy": {
+          "type": "object"
+        },
+        "per_label_recall": {
+          "type": "object"
+        },
+        "family_exact_consistency": {
+          "type": "object"
+        },
+        "train_surface": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "resource": {
+      "type": "object",
+      "required": [
+        "wall_seconds",
+        "peak_accelerator_memory_bytes",
+        "host_peak_rss_bytes"
+      ],
+      "properties": {
+        "wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "peak_accelerator_memory_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "host_peak_rss_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nonpadding_token_presentations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "forward_token_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimated_flops": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "probe_geometry": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}
