@@ -1685,16 +1685,27 @@ class ClassifierDecideStateHook:
         return None
 
 
-def _fra_loss_from_grouped(h: torch.Tensor, tau: float = 1.0) -> tuple[torch.Tensor, int]:
+def _fra_loss_from_grouped(h: torch.Tensor, tau: float = 1.0,
+                           stop_prototype_grad: bool = False) -> tuple[torch.Tensor, int]:
     """FRA loss for h grouped family-major with per-family label order E/C/U
     (shape (F,3,D)). Leave-one-family-out normalized prototypes; cross-entropy
     of auxiliary logits (cosines divided by tau; tau=1.0 is the canonical
-    untempered objective used through D4-C2) against each slot's own label."""
+    untempered objective) against each slot's own label.
+
+    stop_prototype_grad=True (D4-C4 SG): mu is constructed from z.detach() so
+    gradients flow only through the query-z path; the within-family residual
+    centering remains differentiable. Forward logits and scalar loss are
+    numerically identical to the FULL construction."""
     n_fam = h.shape[0]
     r = h - h.mean(dim=1, keepdim=True)
     z = r / torch.clamp(r.norm(dim=-1, keepdim=True), min=FRA_EPS)
-    total = z.sum(dim=0)  # (3, D)
-    mu = (total.unsqueeze(0) - z) / (n_fam - 1)  # (F, 3, D)
+    if stop_prototype_grad:
+        z_const = z.detach()
+        total = z_const.sum(dim=0)  # (3, D)
+        mu = (total.unsqueeze(0) - z_const) / (n_fam - 1)  # (F, 3, D)
+    else:
+        total = z.sum(dim=0)  # (3, D)
+        mu = (total.unsqueeze(0) - z) / (n_fam - 1)  # (F, 3, D)
     mu = F.normalize(mu, dim=-1)
     logits = torch.einsum("fld,fkd->flk", z, mu)  # (F, 3, 3)
     targets = torch.arange(3, device=h.device).unsqueeze(0).expand(n_fam, 3).reshape(-1)
@@ -1702,7 +1713,7 @@ def _fra_loss_from_grouped(h: torch.Tensor, tau: float = 1.0) -> tuple[torch.Ten
 
 
 def _fra_loss_microbatch(h: torch.Tensor, rows: list[dict], fam_of_sid: dict[str, str],
-                         tau: float = 1.0) -> tuple[torch.Tensor, int]:
+                         tau: float = 1.0, stop_prototype_grad: bool = False) -> tuple[torch.Tensor, int]:
     """Group a microbatch's captured <DECIDE> states by family (resolved via
     fam_of_sid: production rows carry sample_id/label_id but not family_id);
     use only complete E/C/U families wholly present. Fails closed on malformed
@@ -1721,7 +1732,9 @@ def _fra_loss_microbatch(h: torch.Tensor, rows: list[dict], fam_of_sid: dict[str
             f"fail-closed: only {len(ordered)} complete families in microbatch (< {FRA_MIN_FAMILIES})"
         )
     idx = torch.tensor([p for _, slots in ordered for p in slots], device=h.device)
-    loss, _ = _fra_loss_from_grouped(h.index_select(0, idx).view(len(ordered), 3, -1), tau=tau)
+    loss, _ = _fra_loss_from_grouped(
+        h.index_select(0, idx).view(len(ordered), 3, -1), tau=tau, stop_prototype_grad=stop_prototype_grad
+    )
     assert torch.is_tensor(loss) and loss.dim() == 0 and bool(torch.isfinite(loss)), (
         "FRA loss must be a finite scalar tensor"
     )
@@ -2240,7 +2253,8 @@ D4C2_PREFLIGHT_OUT = (
 
 def _d4c2_effective_batch_step(model, hook: ClassifierDecideStateHook, batch_indices: list[int],
                                train_rows: list[dict], fam_of_sid: dict[str, str], device,
-                               tau: float = 1.0, return_states: bool = False) -> dict:
+                               tau: float = 1.0, return_states: bool = False,
+                               stop_prototype_grad: bool = False) -> dict:
     """Two-pass exact-VJP full-effective-batch FRA step computation.
 
     Pass 1 (no_grad): forward the 8 microbatches, collect all 128 <DECIDE>
@@ -2281,7 +2295,10 @@ def _d4c2_effective_batch_step(model, hook: ClassifierDecideStateHook, batch_ind
     flat_idx = torch.tensor([p for _, slots in ordered for p in slots], device=states.device)
 
     h_proxy = states.detach().clone().requires_grad_(True)
-    loss, _ = _fra_loss_from_grouped(h_proxy.index_select(0, flat_idx).view(n_fam, 3, -1), tau=tau)
+    loss, _ = _fra_loss_from_grouped(
+        h_proxy.index_select(0, flat_idx).view(n_fam, 3, -1), tau=tau,
+        stop_prototype_grad=stop_prototype_grad,
+    )
     loss.backward()
     g_full = h_proxy.grad.detach().clone()
     with torch.no_grad():
@@ -2964,9 +2981,468 @@ def run_d4c3(updates: int = 800) -> dict:
     })
 
 
+# ------------------------------------------------------------------ D4-C4 ----
+
+D4C4_PREFLIGHT_OUT = (
+    REPO_ROOT / "local_data" / "e0_qualification_bootstrap" / "DIAG" / "d4c4_preflight.json"
+)
+
+
+def _fra_observables(model, hook: ClassifierDecideStateHook, rows: list[dict], device) -> dict:
+    """Observational FRA geometry on a complete 24-family probe set: pre-
+    normalization residual norms, three-class cosine-logit spread, and
+    target-minus-best-nontarget cosine margin (single no-grad forward)."""
+    model.eval()
+    ids, decide, _ = collate(rows, device)
+    with torch.no_grad():
+        hook.captured["active"] = True
+        model(ids, decide)
+        hook.captured["active"] = False
+        h = hook.captured["tensor"].float()
+    model.train()
+    n_fam = len(rows) // 3
+    hh = h.view(n_fam, 3, -1)
+    r = hh - hh.mean(dim=1, keepdim=True)
+    r_norms = r.norm(dim=-1)  # (F, 3)
+    z = r / torch.clamp(r.norm(dim=-1, keepdim=True), min=FRA_EPS)
+    total = z.sum(dim=0)
+    mu = F.normalize((total.unsqueeze(0) - z) / (n_fam - 1), dim=-1)
+    logits = torch.einsum("fld,fkd->flk", z, mu)  # (F,3,3) cosine logits
+    spread = (logits.max(dim=-1).values - logits.min(dim=-1).values)  # (F,3)
+    tgt = logits.diagonal(dim1=-2, dim2=-1)  # (F,3) a_{f,l,l}
+    best_nontarget = torch.maximum(
+        torch.roll(logits, 1, dims=-1).diagonal(dim1=-2, dim2=-1),
+        torch.roll(logits, 2, dims=-1).diagonal(dim1=-2, dim2=-1),
+    )
+    margin = tgt - best_nontarget
+    return {
+        "residual_norm_mean": float(r_norms.mean()),
+        "residual_norm_median": float(r_norms.median()),
+        "cosine_logit_spread_mean": float(spread.mean()),
+        "cosine_logit_spread_max": float(spread.max()),
+        "target_margin_mean": float(margin.mean()),
+        "target_margin_min": float(margin.min()),
+    }
+
+
+def _d4c4_gradient_decomposition(device) -> dict:
+    """Decompose the initial state-space gradient on the frozen 128-example
+    batch into g_FULL, g_SG, and g_PROTO = g_FULL - g_SG, recording norms,
+    cosines, and the signed projection of the prototype component onto the
+    query component. Directly tests whether prototype backprop cancels,
+    reinforces, or rotates the query-side signal."""
+    from m0_model import build_model
+
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    train_rows, _ = load_split(REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", "train_ID")
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    batch_indices = stream.take(128)
+    rows_all = [train_rows[i] for i in batch_indices]
+
+    model = build_model("C0", DIAG_SEED, device)
+    hook = ClassifierDecideStateHook(model.classifier)
+    states = []
+    for micro in range(GRAD_ACCUM):
+        rows = rows_all[micro * MICROBATCH : (micro + 1) * MICROBATCH]
+        ids, decide, _ = collate(rows, device)
+        hook.captured["active"] = True
+        with torch.no_grad():
+            model(ids, decide)
+        hook.captured["active"] = False
+        states.append(hook.captured["tensor"].float())
+    states = torch.cat(states, dim=0)
+    positions = {}
+    for pos, row in enumerate(rows_all):
+        positions.setdefault(fam_of_sid[row["sample_id"]], {})[row["label_id"]] = pos
+    ordered = [(fid, [s[0], s[1], s[2]]) for fid, s in sorted(positions.items()) if set(s) == {0, 1, 2}]
+    flat_idx = torch.tensor([p for _, s in ordered for p in s], device=device)
+    grouped = states.index_select(0, flat_idx).view(len(ordered), 3, -1)
+
+    def grad_of(stop: bool):
+        hp = states.detach().clone().requires_grad_(True)
+        loss, _ = _fra_loss_from_grouped(
+            hp.index_select(0, flat_idx).view(len(ordered), 3, -1), tau=1.0, stop_prototype_grad=stop
+        )
+        loss.backward()
+        return hp.grad.detach().clone(), float(loss.detach())
+
+    g_full, loss_full = grad_of(False)
+    g_sg, loss_sg = grad_of(True)
+    g_proto = g_full - g_sg
+
+    cos_full_sg = float(F.cosine_similarity(g_full.flatten(), g_sg.flatten(), dim=0))
+    cos_sg_proto = float(F.cosine_similarity(g_sg.flatten(), g_proto.flatten(), dim=0))
+    signed_projection = float(torch.dot(g_proto.flatten(), g_sg.flatten()) / g_sg.norm())
+    return {
+        "batch_complete_families": len(ordered),
+        "full_loss": loss_full,
+        "sg_loss": loss_sg,
+        "loss_diff": abs(loss_full - loss_sg),
+        "g_full_norm": float(g_full.norm()),
+        "g_sg_norm": float(g_sg.norm()),
+        "g_proto_norm": float(g_proto.norm()),
+        "cos_g_full_g_sg": cos_full_sg,
+        "cos_g_sg_g_proto": cos_sg_proto,
+        "signed_projection_of_proto_onto_query": signed_projection,
+        "projection_ratio": float(g_proto.norm() / g_sg.norm()),
+    }
+
+
+def _d4c4_sg_equivalence_check(device) -> dict:
+    """Direct-vs-two-pass SG gradient equivalence on one real 16-example case."""
+    from m0_model import build_model
+
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    train_rows, _ = load_split(REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", "train_ID")
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    rows = [train_rows[i] for i in stream.take(128)[0:MICROBATCH]]
+    ids, decide, labels = collate(rows, device)
+
+    model_a = build_model("C0", DIAG_SEED, device)
+    hook_a = ClassifierDecideStateHook(model_a.classifier)
+    hook_a.captured["active"] = True
+    model_a(ids, decide)
+    hook_a.captured["active"] = False
+    loss_a, n_fam = _fra_loss_microbatch(hook_a.captured["tensor"], rows, fam_of_sid, stop_prototype_grad=True)
+    model_a.zero_grad(set_to_none=True)
+    loss_a.backward()
+    grads_a = {
+        name: (p.grad.detach().clone() if p.grad is not None else None)
+        for name, p in model_a.named_parameters()
+    }
+
+    model_b = build_model("C0", DIAG_SEED, device)
+    hook_b = ClassifierDecideStateHook(model_b.classifier)
+    hook_b.captured["active"] = True
+    with torch.no_grad():
+        model_b(ids, decide)
+    hook_b.captured["active"] = False
+    states = hook_b.captured["tensor"].float()
+    positions = {}
+    for pos, row in enumerate(rows):
+        positions.setdefault(fam_of_sid[row["sample_id"]], {})[row["label_id"]] = pos
+    ordered = [(fid, [s[0], s[1], s[2]]) for fid, s in sorted(positions.items()) if set(s) == {0, 1, 2}]
+    flat_idx = torch.tensor([p for _, s in ordered for p in s], device=device)
+    h_proxy = states.detach().clone().requires_grad_(True)
+    loss_b, _ = _fra_loss_from_grouped(
+        h_proxy.index_select(0, flat_idx).view(len(ordered), 3, -1), stop_prototype_grad=True
+    )
+    loss_b.backward()
+    g = h_proxy.grad.detach().clone()
+    model_b.zero_grad(set_to_none=True)
+    hook_b.captured["active"] = True
+    model_b(ids, decide)
+    hook_b.captured["active"] = False
+    hook_b.captured["tensor"].backward(gradient=g)
+    grads_b = {
+        name: (p.grad.detach().clone() if p.grad is not None else None)
+        for name, p in model_b.named_parameters()
+    }
+
+    max_diff, worst_rel, min_cos = 0.0, 0.0, 1.0
+    for name in grads_a:
+        a, b = grads_a[name], grads_b[name]
+        if a is None and b is None:
+            continue
+        if a is None or b is None:
+            worst_rel = float("inf")
+            break
+        max_diff = max(max_diff, float((a - b).abs().max()))
+        norm_a = float(a.norm())
+        if norm_a > 0:
+            worst_rel = max(worst_rel, float((a - b).norm()) / norm_a)
+            min_cos = min(min_cos, float(F.cosine_similarity(a.flatten(), b.flatten(), dim=0)))
+    return {
+        "families_in_case": n_fam,
+        "direct_loss": float(loss_a.detach()),
+        "proxy_loss": float(loss_b.detach()),
+        "loss_diff": abs(float(loss_a.detach()) - float(loss_b.detach())),
+        "worst_relative_l2_diff": worst_rel,
+        "min_gradient_cosine": min_cos,
+        "equivalent": worst_rel <= 1e-4 and min_cos >= 0.999999,
+        "tolerance": {"worst_relative_l2": 1e-4, "min_cosine": 0.999999},
+    }
+
+
+def run_d4c4_preflight() -> dict:
+    """D4-C4 preflight: gradient decomposition (FULL/SG/PROTO), SG direct-vs-
+    two-pass equivalence, and one discarded 128-example SG update rehearsal.
+    Output stays outside docs/. Fail closed."""
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    decomposition = _d4c4_gradient_decomposition(device)
+    sg_equivalence = _d4c4_sg_equivalence_check(device)
+
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    hook = ClassifierDecideStateHook(model.classifier)
+
+    optimizer.zero_grad(set_to_none=True)
+    step = _d4c2_effective_batch_step(
+        model, hook, stream.take(128), train_rows, fam_of_sid, device,
+        tau=1.0, stop_prototype_grad=True,
+    )
+    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+    optimizer.step()
+    params_finite = all(bool(torch.isfinite(p.data).all()) for p in model.parameters())
+
+    checks = {
+        "gradient_decomposition": decomposition,
+        "sg_equivalence": sg_equivalence,
+        "rehearsal": {
+            "full_batch_complete_families": step["full_batch_complete_families"],
+            "fragment_examples": step["fragment_examples"],
+            "sg_loss": step["fra_loss"],
+            "vjp_nonzero_finite": step["vjp_nonzero_finite"],
+            "grad_norm_pre_clip": float(grad_norm),
+            "params_finite_after_step": params_finite,
+        },
+    }
+    ok = (
+        sg_equivalence["equivalent"]
+        and step["full_batch_complete_families"] >= FRA_MIN_FAMILIES
+        and step["vjp_nonzero_finite"]
+        and bool(torch.isfinite(grad_norm))
+        and params_finite
+        and decomposition["g_sg_norm"] > 0
+        and bool(torch.isfinite(torch.tensor(decomposition["g_full_norm"])))
+    )
+    manifest = diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C4-PREFLIGHT-v0",
+        "authority": "issue #3 D4-C4 (prototype-gradient coupling, comment 5628886619) preflight",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "effective_updates": 1,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == "",
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "output_location_note": "written under local_data (gitignored) so the D4-C4 run records a literally clean tree",
+        "checks": checks,
+        "model_discarded": True,
+        "status": "PASS" if ok else "FAIL",
+    })
+    del model, optimizer
+    torch.cuda.empty_cache()
+    return manifest
+
+
+def run_d4c4(updates: int = 800) -> dict:
+    """D4-C4 prototype-gradient coupling: paired FULL (D4-C2 configuration,
+    must reproduce D4-C2) vs SG (mu from z.detach(); query-z path only).
+    Identical forward logits and scalar loss; everything else frozen."""
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    raw_eval = [json.loads(line) for line in
+                (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl").open(encoding="utf-8")]
+    unseen_rows, unseen_digest = _d4a_probe_rows(raw_eval)
+    d3_train_rows, _d3_hold, d3_meta = d3_family_sets(raw_train)
+    d3_train_digest = d3_meta["train_family_list_sha256"]
+
+    d4c2 = json.loads((DIAG_DIR / "d4c2_effective_batch_support.json").read_text(encoding="utf-8"))
+    d4c2_probes = d4c2["probes"]
+
+    arms: dict[str, dict] = {}
+    for arm in ("FULL", "SG"):
+        ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                               REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+        device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+        train_rows = ctx["train_rows"]
+        tree_clean = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == ""
+        fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+        sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+        fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+        stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+        hook = ClassifierDecideStateHook(model.classifier)
+        stop_grad = arm == "SG"
+
+        telemetry: list[dict] = []
+        probes: dict[str, dict] = {}
+        family_counts: list[int] = []
+
+        def capture(tag: str, update: int) -> None:
+            probes[tag] = {
+                "update": update,
+                "train_ID": _eval_surface_metrics(model, train_rows, device),
+                "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+                "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+                "train_family_geometry": _d3_probe_geometry(model, d3_train_rows, device),
+                "unseen_family_geometry": _d3_probe_geometry(model, unseen_rows, device),
+                "fra_loss_train_probe": _fra_loss_probe(model, hook, d3_train_rows, device, tau=1.0),
+                "fra_loss_unseen_probe": _fra_loss_probe(model, hook, unseen_rows, device, tau=1.0),
+                "fra_observables_train": _fra_observables(model, hook, d3_train_rows, device),
+                "fra_observables_unseen": _fra_observables(model, hook, unseen_rows, device),
+            }
+            disp = probes[tag]["train_family_geometry"]["cross_family_displacement"]
+            mean_align = sum(
+                disp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+            ) / 3.0
+            print(
+                f"[D4C4 {arm}] probe {tag}: trainFRA={probes[tag]['fra_loss_train_probe']:.4f} "
+                f"align={mean_align:.4f} spread={probes[tag]['fra_observables_train']['cosine_logit_spread_mean']:.5f} "
+                f"margin={probes[tag]['fra_observables_train']['target_margin_mean']:.5f} "
+                f"eval_ID={probes[tag]['eval_ID']['cmdr_sma']:.6f}",
+                flush=True,
+            )
+
+        torch.cuda.reset_peak_memory_stats(device)
+        capture("T0", 0)
+        started = time.time()
+        for update in range(1, updates + 1):
+            lr = learning_rate(update)
+            for group in optimizer.param_groups:
+                group["lr"] = lr
+            batch_indices = stream.take(128)
+            optimizer.zero_grad(set_to_none=True)
+            step = _d4c2_effective_batch_step(
+                model, hook, batch_indices, train_rows, fam_of_sid, device,
+                tau=1.0, stop_prototype_grad=stop_grad,
+            )
+            family_counts.append(step["full_batch_complete_families"])
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            optimizer.step()
+            if update <= 200 or update % 10 == 0:
+                telemetry.append({
+                    "update": update, "lr": lr,
+                    "update_full_batch_fra_loss": step["fra_loss"],
+                    "full_batch_complete_families": step["full_batch_complete_families"],
+                    "vjp_norm": step["vjp_norm"],
+                    "grad_norm_pre_clip": float(grad_norm),
+                })
+            if update in D4C1_PROBE_UPDATES:
+                capture(f"T{update}", update)
+        wall = time.time() - started
+
+        reproduction = None
+        if arm == "FULL":
+            mismatches = []
+            for tag in ("T0", "T200", "T400", "T800"):
+                mine, ref = probes[tag], d4c2_probes[tag]
+                for name, path in [
+                    ("train_FRA", ("fra_loss_train_probe",)),
+                    ("unseen_FRA", ("fra_loss_unseen_probe",)),
+                    ("eval_ID_SMA", ("eval_ID", "cmdr_sma")),
+                    ("eval_STRUCT_SMA", ("eval_STRUCT", "cmdr_sma")),
+                    ("align_E_minus_C", ("train_family_geometry", "cross_family_displacement", "E_minus_C", "mean_pairwise_cos")),
+                ]:
+                    a = mine
+                    b = ref
+                    for k in path:
+                        a = a[k]
+                        b = b[k]
+                    if a != b:
+                        mismatches.append({"probe": tag, "metric": name, "new": a, "d4c2": b})
+            reproduction = {"probes_compared": 4, "mismatches": mismatches, "reproduced": not mismatches}
+            if mismatches:
+                DIAG_DIR.mkdir(parents=True, exist_ok=True)
+                (DIAG_DIR / "d4c4_full_reproduction_failure.json").write_text(
+                    json.dumps(reproduction, indent=2), encoding="utf-8"
+                )
+                raise SystemExit(
+                    f"D4-C4 FULL gate FAILED: {len(mismatches)} mismatches vs D4-C2; SG not started."
+                )
+
+        final = probes[f"T{updates}"]
+        disp = final["train_family_geometry"]["cross_family_displacement"]
+        mean_align = sum(
+            disp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+        ) / 3.0
+        train_fra_loss = final["fra_loss_train_probe"]
+        if mean_align > 0.50 and train_fra_loss < 0.80:
+            arm_endpoint = "FRA_SELF_OPTIMIZES"
+        elif mean_align < 0.25 and train_fra_loss >= 1.00:
+            arm_endpoint = "FRA_SELF_OPTIMIZATION_FAILED"
+        else:
+            arm_endpoint = "INCONCLUSIVE"
+
+        arms[arm] = {
+            "working_tree_clean_at_start": tree_clean,
+            "parameter_count": sum(p.numel() for p in model.parameters()),
+            "telemetry": telemetry,
+            "probes": probes,
+            "wall_seconds": round(wall, 1),
+            "final_train_mean_alignment": mean_align,
+            "final_train_fra_probe_loss": train_fra_loss,
+            "effective_batch_family_counts": {
+                "min": min(family_counts), "max": max(family_counts),
+                "mean": sum(family_counts) / len(family_counts), "updates": len(family_counts),
+            },
+            "arm_endpoint": arm_endpoint,
+            "d4c2_reproduction": reproduction,
+        }
+        del model, optimizer
+        torch.cuda.empty_cache()
+
+    full_ep = arms["FULL"]["arm_endpoint"]
+    sg_ep = arms["SG"]["arm_endpoint"]
+    if full_ep == "FRA_SELF_OPTIMIZATION_FAILED" and sg_ep == "FRA_SELF_OPTIMIZES":
+        pattern = "PROTOTYPE_COUPLING_CAUSAL"
+    elif full_ep == "FRA_SELF_OPTIMIZATION_FAILED" and sg_ep == "FRA_SELF_OPTIMIZATION_FAILED":
+        pattern = "COUPLING_NOT_BOTTLENECK"
+    elif full_ep == "FRA_SELF_OPTIMIZES" and sg_ep == "FRA_SELF_OPTIMIZES":
+        pattern = "STOP_REPRODUCIBILITY_DIAGNOSIS"
+    else:
+        pattern = "INCONCLUSIVE"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C4-PROTOTYPE-COUPLING-v0",
+        "authority": "issue #3 D4-C4 (prototype-gradient coupling, comment 5628886619); single factor in SG arm: mu from z.detach(); FULL must reproduce D4-C2 before SG proceeds",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": arms["SG"]["working_tree_clean_at_start"],
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": arms["SG"]["parameter_count"],
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "fra_config": {
+            "full": "gradients flow through query z and leave-one-out prototypes mu (D4-C2 configuration, tau=1)",
+            "sg": "mu constructed from z.detach(); gradients flow only through the query-z path; residual centering differentiable; forward logits/loss identical",
+            "full_effective_batch_support": True,
+            "construction": "two-pass exact VJP",
+            "residual_epsilon": FRA_EPS,
+        },
+        "d3_train_probe_family_list_sha256": d3_train_digest,
+        "unseen_probe_family_list_sha256": unseen_digest,
+        "observables_definition": {
+            "residual_norm": "||h_{f,l} - mean_k h_{f,k}||_2 before normalization",
+            "cosine_logit_spread": "mean over family-label slots of (max_k - min_k) a_{f,l,k}",
+            "target_margin": "a_{f,l,l} - max_{k!=l} a_{f,l,k}",
+        },
+        "endpoint_criteria": {
+            "per_arm": "FRA_SELF_OPTIMIZES: align > 0.50 AND train FRA < 0.80; FAILED: align < 0.25 AND train FRA >= 1.00; else INCONCLUSIVE",
+            "pattern": "FULL fails + SG optimizes -> PROTOTYPE_COUPLING_CAUSAL; both fail -> COUPLING_NOT_BOTTLENECK; both optimize -> STOP_REPRODUCIBILITY_DIAGNOSIS; else INCONCLUSIVE",
+        },
+        "arms": arms,
+        "observed_pattern": pattern,
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "d4c2", "d4c2-preflight", "d4c3", "d4c3-preflight", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "d4c2", "d4c2-preflight", "d4c3", "d4c3-preflight", "d4c4", "d4c4-preflight", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
@@ -2978,6 +3454,7 @@ def main() -> None:
     parser.add_argument("--d4c1-updates", type=int, default=800)
     parser.add_argument("--d4c2-updates", type=int, default=800)
     parser.add_argument("--d4c3-updates", type=int, default=800)
+    parser.add_argument("--d4c4-updates", type=int, default=800)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -3032,6 +3509,16 @@ def main() -> None:
         raise SystemExit(0 if manifest["status"] == "PASS" else 1)
     if args.mode in ("d4c3", "all"):
         write_diag("d4c3_fixed_temperature.json", run_d4c3(updates=args.d4c3_updates))
+    if args.mode in ("d4c4-preflight", "all"):
+        manifest = run_d4c4_preflight()
+        D4C4_PREFLIGHT_OUT.parent.mkdir(parents=True, exist_ok=True)
+        D4C4_PREFLIGHT_OUT.write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n"
+        )
+        print(f"wrote {D4C4_PREFLIGHT_OUT} (outside docs/ - tree stays literally clean)")
+        raise SystemExit(0 if manifest["status"] == "PASS" else 1)
+    if args.mode in ("d4c4", "all"):
+        write_diag("d4c4_prototype_coupling.json", run_d4c4(updates=args.d4c4_updates))
 
 
 if __name__ == "__main__":
