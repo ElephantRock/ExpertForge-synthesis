@@ -1,0 +1,64 @@
+{
+  "diagnostic_only": true,
+  "non_scientific": true,
+  "git_commit": "211d16306574a75eaff3dda30c2b2e8a082b6a16",
+  "branch": "e0/q2-unqualified-diagnostics",
+  "runtime_snapshot_sha256": "238a881ae5e30d464b8fed7858232b81357af9a9634bac5ad6257474072cb556",
+  "generated_utc": "2026-09-11T02:44:38Z",
+  "authority": "issue #3 D4-C3 (fixed-temperature FRA self-optimization, tau=0.25 a priori) preflight",
+  "schema_id": "E0-Q2-DIAG-D4C3-PREFLIGHT-v0",
+  "candidate": "C0",
+  "seed": 1647674144,
+  "effective_updates": 1,
+  "wd_scope": "exclude_norm_bias",
+  "working_tree_clean_at_start": true,
+  "code_git_commit": "211d16306574a75eaff3dda30c2b2e8a082b6a16",
+  "parameter_count": 53232643,
+  "verified_q1_input_digests": {
+    "train_ID.jsonl": "79daa2c007bc914e228a0312d8278b8f5ca7cb2c28f1450d508f9924362aacf1",
+    "eval_ID.jsonl": "b66b6629173449f71022fba0e7907826733aa7ae28e0b7502716ba4fdd45fce8",
+    "eval_STRUCT.jsonl": "688865d27b8e1fd208b2b453670306d1b4ecc9ff9a21130a297e67cc4b07c7d8",
+    "CMDR-Lex-v1.json": "c3d44e7a99163456ef149fdd1b1caf2fd694e8412e6f082480cb05c2ef237471"
+  },
+  "output_location_note": "written under local_data (gitignored) so the D4-C3 run records a literally clean tree",
+  "checks": {
+    "equivalence_tau_025": {
+      "tau": 0.25,
+      "families_in_case": 5,
+      "direct_loss": 1.1566386222839355,
+      "proxy_loss": 1.1566386222839355,
+      "loss_diff": 0.0,
+      "max_param_grad_abs_diff": 3.910064697265625e-05,
+      "worst_parameter": null,
+      "worst_relative_l2_diff": 4.056786619746457e-05,
+      "min_gradient_cosine": 0.9999998807907104,
+      "equivalent": true,
+      "tolerance": {
+        "worst_relative_l2": 0.0001,
+        "min_cosine": 0.999999
+      }
+    },
+    "tau_vjp_comparison": {
+      "batch_complete_families": 42,
+      "fragment_examples": 2,
+      "tau1_loss": 1.107041597366333,
+      "tau0.25_loss": 1.161520004272461,
+      "tau1_vjp_norm": 0.7499373555183411,
+      "tau0.25_vjp_norm": 3.0644755363464355,
+      "vjp_cosine_between_taus": 0.9946048855781555,
+      "vjp_norm_ratio": 4.086308479309082
+    },
+    "rehearsal": {
+      "full_batch_complete_families": 42,
+      "fragment_examples": 2,
+      "tempered_loss": 1.161520004272461,
+      "untempered_loss_same_batch": 1.107041597366333,
+      "vjp_norm": 3.0644755363464355,
+      "vjp_nonzero_finite": true,
+      "grad_norm_finite": true,
+      "params_finite_after_step": true
+    }
+  },
+  "model_discarded": true,
+  "status": "PASS"
+}

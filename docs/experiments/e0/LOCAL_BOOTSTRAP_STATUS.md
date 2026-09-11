@@ -1,5 +1,14 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-C3 fixed-temperature FRA (τ=0.25) — COMPLETE: `FRA_SELF_OPTIMIZATION_FAILED` (lineage: code `211d163` = Commit U → evidence in this commit)
+
+**Preflight (from literally clean U, output under gitignored `local_data` until this commit): PASS.** τ=0.25 direct-vs-VJP equivalence holds (worst rel 4.06e-05, min cosine 0.99999988, loss diff exactly 0). The frozen-batch τ comparison quantified what temperature actually changes at init: VJP norm amplification ×4.09 (largely normalized by the frozen grad clip — pre-clip norms 11.0 at u=1) with only mild rotation of the gradient direction (cosine 0.9946 between τ=1 and τ=0.25 VJPs). Tempered rehearsal: 42 families, all finite.
+
+**D4-C3 result (single changed factor vs D4-C2: `auxiliary_logits = cosine_logits / 0.25`; 800 updates; canonical untempered probe loss preserved for endpoint comparability):** training tempered FRA loss fluctuates in the ln(3) band (1.16 → 1.24 at u=800; untempered 1.107 → 1.116); the VJP norm explodes (3.1 → 51.9 → 226.9 → 124.2) while the clipped parameter gradient stays bounded (~6–11) and the geometry never moves — train mean alignment −0.003 → +0.005 at T800; canonical train FRA probe loss **1.0742**; eval exactly 0.333333. Tempered and untempered probe losses converge to near-identity (1.0741 vs 1.0742): the cosine-logit spread never widened, i.e. sharpening did not extract more usable signal from these states.
+
+**Endpoint per the frozen criteria (canonical untempered values): `FRA_SELF_OPTIMIZATION_FAILED` — τ=0.25 is insufficient.** Per the release, this rules out only τ=0.25 (not all temperatures); the next target, if pursued, is prototype-gradient coupling / objective formulation rather than λ, LR, optimizer, or architecture. The standing horizon caveat applies (800 updates). Q2 remains UNQUALIFIED; Q3, corpus generation, and v0.6 execution remain **held** pending Commit V review.
+
+
 ## D4-C2 effective-batch prototype support — COMPLETE: `FRA_SELF_OPTIMIZATION_FAILED` (lineage: code `aa7a62a` = Commit S → evidence in this commit)
 
 **Preflight (from literally clean S, output under gitignored `local_data` until this commit): PASS.** The two-pass exact-VJP construction was validated before the arm: on a real 16-example microbatch, direct FRA-backward and proxy/VJP parameter gradients from identically initialized C0 models agree to worst relative L2 difference 4.1e-05 and minimum cosine 0.99999988 (float32 accumulation-order noise; tolerance recalibrated from absolute 1e-6 to relative 1e-4 / cosine 0.999999 with the measured rationale recorded). The working-tree rehearsal of the new preflight caught two pre-commit defects (None-grad comparison crash; miscalibrated tolerance) before Commit S existed. One real 128-example D4-C2 update rehearsed end-to-end: 42 complete families + 2 fragment examples, nonzero finite VJP (0.75), finite step/params.
