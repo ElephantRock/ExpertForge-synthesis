@@ -3899,9 +3899,262 @@ def run_d4c5(updates: int = 800) -> dict:
     })
 
 
+# ----------------------------------------------------------------- D4-C5E ----
+
+D4C5E_PROBE_UPDATES = (200, 400, 800, 1200, 1600, 2000)
+
+
+def _compare_probe_scalars(mine, ref, path: tuple = ()):
+    """Recursive exact comparison of every scalar leaf present in the
+    reference probe dict. New fields absent from the reference are ignored."""
+    mismatches = []
+    if isinstance(ref, dict):
+        if not isinstance(mine, dict):
+            return [{"path": "/".join(path), "new_type": type(mine).__name__, "ref_type": "dict"}]
+        for key in ref:
+            if key in mine:
+                mismatches.extend(_compare_probe_scalars(mine[key], ref[key], path + (str(key),)))
+            else:
+                mismatches.append({"path": "/".join(path + (str(key),)), "missing_in_new": True})
+    elif isinstance(ref, list):
+        if not isinstance(mine, list) or len(mine) != len(ref):
+            return [{"path": "/".join(path), "new": str(mine)[:80], "ref": str(ref)[:80]}]
+        for i, (m, r) in enumerate(zip(mine, ref)):
+            mismatches.extend(_compare_probe_scalars(m, r, path + (str(i),)))
+    else:
+        if mine != ref:
+            mismatches.append({"path": "/".join(path), "new": mine, "ref": ref})
+    return mismatches
+
+
+def _fixed_anchor_argmax_metrics(model, hook: ClassifierDecideStateHook, rows: list[dict],
+                                 device, anchors: torch.Tensor) -> dict:
+    """Fixed-anchor argmax accuracy and per-label recall over a complete
+    24-family probe set (labels: slot order E/C/U)."""
+    model.eval()
+    ids, decide, _ = collate(rows, device)
+    with torch.no_grad():
+        hook.captured["active"] = True
+        model(ids, decide)
+        hook.captured["active"] = False
+        h = hook.captured["tensor"].float()
+        n_fam = len(rows) // 3
+        hh = h.view(n_fam, 3, -1)
+        r = hh - hh.mean(dim=1, keepdim=True)
+        z = r / torch.clamp(r.norm(dim=-1, keepdim=True), min=FRA_EPS)
+        logits = torch.einsum("fld,kd->flk", z, anchors)
+        pred = logits.argmax(dim=-1).reshape(-1).cpu().numpy()
+    model.train()
+    y = np.tile(np.arange(3), n_fam)
+    per_label = {name: float(np.mean(pred[y == i] == i)) for i, name in enumerate(LABELS)}
+    return {
+        "argmax_accuracy": float(np.mean(pred == y)),
+        "per_label_recall": per_label,
+        "min_label_recall": min(per_label.values()),
+        "pred_hist": [int(np.sum(pred == i)) for i in range(3)],
+    }
+
+
+def run_d4c5e(updates: int = 2000, gate_update: int = 800) -> dict:
+    """D4-C5E fixed-anchor horizon extension: FIXED only, from scratch, to
+    2,000 updates with every choice unchanged. Fail-closed gate at T800:
+    every previously recorded probe scalar must exactly reproduce D4-C5 FIXED,
+    and the first-800 stream digest is recorded. Terminal horizon — no
+    automatic extension."""
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    raw_eval = [json.loads(line) for line in
+                (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl").open(encoding="utf-8")]
+    unseen_rows, unseen_digest = _d4a_probe_rows(raw_eval)
+    d3_train_rows, _d3_hold, d3_meta = d3_family_sets(raw_train)
+    d3_train_digest = d3_meta["train_family_list_sha256"]
+
+    d4c5 = json.loads((DIAG_DIR / "d4c5_fixed_anchors.json").read_text(encoding="utf-8"))
+    d4c5_fixed_probes = d4c5["arms"]["FIXED"]["probes"]
+
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows = ctx["train_rows"]
+    tree_clean = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+        capture_output=True, text=True, check=True,
+    ).stdout.strip() == ""
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    hook = ClassifierDecideStateHook(model.classifier)
+    anchors = _fixed_label_anchors(device, dim=512)
+
+    telemetry: list[dict] = []
+    probes: dict[str, dict] = {}
+    family_counts: list[int] = []
+    stream_hasher = hashlib.sha256()
+    gate_report: dict | None = None
+
+    def fixed_probe_loss(rows: list[dict]) -> float:
+        model.eval()
+        i2, d2, _ = collate(rows, device)
+        with torch.no_grad():
+            hook.captured["active"] = True
+            model(i2, d2)
+            hook.captured["active"] = False
+            h = hook.captured["tensor"].float()
+            loss = _fixed_anchor_loss_from_grouped(h.view(len(rows) // 3, 3, -1), anchors)
+        model.train()
+        return float(loss)
+
+    def capture(tag: str, update: int) -> None:
+        probes[tag] = {
+            "update": update,
+            "train_ID": _eval_surface_metrics(model, train_rows, device),
+            "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+            "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+            "train_family_geometry": _d3_probe_geometry(model, d3_train_rows, device),
+            "unseen_family_geometry": _d3_probe_geometry(model, unseen_rows, device),
+            "fra_loss_train_probe": _fra_loss_probe(model, hook, d3_train_rows, device, tau=1.0),
+            "fra_loss_unseen_probe": _fra_loss_probe(model, hook, unseen_rows, device, tau=1.0),
+            "fixed_anchor_ce_train_probe": fixed_probe_loss(d3_train_rows),
+            "fixed_anchor_ce_unseen_probe": fixed_probe_loss(unseen_rows),
+            "fixed_anchor_argmax_train": _fixed_anchor_argmax_metrics(model, hook, d3_train_rows, device, anchors),
+            "fixed_anchor_argmax_unseen": _fixed_anchor_argmax_metrics(model, hook, unseen_rows, device, anchors),
+        }
+        disp = probes[tag]["train_family_geometry"]["cross_family_displacement"]
+        mean_align = sum(
+            disp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+        ) / 3.0
+        udisp = probes[tag]["unseen_family_geometry"]["cross_family_displacement"]
+        unseen_align = sum(
+            udisp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+        ) / 3.0
+        print(
+            f"[D4C5E FIXED] probe {tag}: trainCE={probes[tag]['fixed_anchor_ce_train_probe']:.4f} "
+            f"unseenCE={probes[tag]['fixed_anchor_ce_unseen_probe']:.4f} "
+            f"trainAlign={mean_align:.4f} unseenAlign={unseen_align:.4f} "
+            f"trainArgmax={probes[tag]['fixed_anchor_argmax_train']['argmax_accuracy']:.4f} "
+            f"unseenArgmax={probes[tag]['fixed_anchor_argmax_unseen']['argmax_accuracy']:.4f}",
+            flush=True,
+        )
+
+    torch.cuda.reset_peak_memory_stats(device)
+    capture("T0", 0)
+    started = time.time()
+    for update in range(1, updates + 1):
+        lr = learning_rate(update)
+        for group in optimizer.param_groups:
+            group["lr"] = lr
+        batch_indices = stream.take(128)
+        if update <= gate_update:
+            stream_hasher.update(json.dumps(batch_indices).encode())
+        optimizer.zero_grad(set_to_none=True)
+        step = _d4c2_effective_batch_step(
+            model, hook, batch_indices, train_rows, fam_of_sid, device,
+            tau=1.0, fixed_anchors=anchors,
+        )
+        family_counts.append(step["full_batch_complete_families"])
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+        optimizer.step()
+        if update <= 200 or update % 10 == 0:
+            telemetry.append({
+                "update": update, "lr": lr,
+                "update_full_batch_applied_loss": step["fra_loss"],
+                "full_batch_complete_families": step["full_batch_complete_families"],
+                "vjp_norm": step["vjp_norm"],
+                "grad_norm_pre_clip": float(grad_norm),
+            })
+        if update in D4C5E_PROBE_UPDATES:
+            capture(f"T{update}", update)
+        if update == gate_update:
+            first_stream_digest = stream_hasher.hexdigest()
+            mismatches = []
+            for tag in ("T0", "T200", "T400", "T800"):
+                mismatches.extend(_compare_probe_scalars(probes[tag], d4c5_fixed_probes[tag], (tag,)))
+            gate_report = {
+                "gate_update": gate_update,
+                "first_stream_sha256": first_stream_digest,
+                "scalars_compared_against": "D4-C5 FIXED probes (recursive, every reference scalar leaf)",
+                "mismatch_count": len(mismatches),
+                "mismatches": mismatches[:20],
+                "reproduced": not mismatches,
+            }
+            print(f"[D4C5E] T800 reproduction gate: reproduced={gate_report['reproduced']} "
+                  f"stream-digest={first_stream_digest[:16]}", flush=True)
+            if mismatches:
+                DIAG_DIR.mkdir(parents=True, exist_ok=True)
+                (DIAG_DIR / "d4c5e_gate_failure.json").write_text(
+                    json.dumps(gate_report, indent=2), encoding="utf-8"
+                )
+                raise SystemExit(
+                    f"D4-C5E gate FAILED at T{gate_update}: {len(mismatches)} probe-scalar mismatches vs D4-C5 FIXED."
+                )
+    wall = time.time() - started
+
+    final = probes[f"T{updates}"]
+
+    def align(which: str) -> float:
+        disp = final[f"{which}_family_geometry"]["cross_family_displacement"]
+        return sum(disp[n]["mean_pairwise_cos"] for n in ("E_minus_C", "E_minus_U", "C_minus_U")) / 3.0
+
+    train_align = align("train")
+    unseen_align = align("unseen")
+    train_ce = final["fixed_anchor_ce_train_probe"]
+    unseen_ce = final["fixed_anchor_ce_unseen_probe"]
+
+    train_optimizes = train_align > 0.50 and train_ce < 0.80
+    train_failed = train_align < 0.25 and train_ce >= 1.00
+    unseen_transfer = unseen_align > 0.25 and unseen_ce < 1.00
+
+    if train_failed:
+        outcome = "FIXED_TARGET_INSUFFICIENT"
+    elif train_optimizes and unseen_transfer:
+        outcome = "PERSISTENT_TARGET_TRANSFER"
+    elif train_optimizes and not unseen_transfer:
+        outcome = "PERSISTENT_TARGET_TRAIN_ONLY"
+    else:
+        outcome = "INCONCLUSIVE"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C5E-FIXED-ANCHOR-EXTENSION-v0",
+        "authority": "issue #3 D4-C5E (fixed-anchor horizon extension, comment 5636632883); terminal horizon 2,000 updates; no automatic extension",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": tree_clean,
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "anchor_sha256": hashlib.sha256(_fixed_label_anchors(torch.device("cpu"), dim=512).numpy().tobytes()).hexdigest(),
+        "d3_train_probe_family_list_sha256": d3_train_digest,
+        "unseen_probe_family_list_sha256": unseen_digest,
+        "t800_reproduction_gate": gate_report,
+        "endpoint_criteria": {
+            "train_optimizes": "train mean alignment > 0.50 AND train fixed-anchor CE < 0.80 (unchanged train gate)",
+            "train_failed": "train mean alignment < 0.25 AND train fixed-anchor CE >= 1.00",
+            "unseen_transfer": "unseen mean displacement alignment > 0.25 AND unseen fixed-anchor CE < 1.00",
+            "outcomes": "train_failed -> FIXED_TARGET_INSUFFICIENT; train_optimizes + unseen_transfer -> PERSISTENT_TARGET_TRANSFER; train_optimizes + not transfer -> PERSISTENT_TARGET_TRAIN_ONLY; else INCONCLUSIVE",
+        },
+        "final": {
+            "train_mean_alignment": train_align,
+            "unseen_mean_alignment": unseen_align,
+            "train_fixed_anchor_ce": train_ce,
+            "unseen_fixed_anchor_ce": unseen_ce,
+            "train_argmax_accuracy": final["fixed_anchor_argmax_train"]["argmax_accuracy"],
+            "unseen_argmax_accuracy": final["fixed_anchor_argmax_unseen"]["argmax_accuracy"],
+            "train_min_label_recall": final["fixed_anchor_argmax_train"]["min_label_recall"],
+            "unseen_min_label_recall": final["fixed_anchor_argmax_unseen"]["min_label_recall"],
+        },
+        "probes": probes,
+        "telemetry": telemetry,
+        "observed_outcome": outcome,
+        "wall_seconds": round(wall, 1),
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "d4c2", "d4c2-preflight", "d4c3", "d4c3-preflight", "d4c4", "d4c4-preflight", "d4c5", "d4c5-preflight", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "d4c2", "d4c2-preflight", "d4c3", "d4c3-preflight", "d4c4", "d4c4-preflight", "d4c5", "d4c5-preflight", "d4c5e", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
@@ -3915,6 +4168,7 @@ def main() -> None:
     parser.add_argument("--d4c3-updates", type=int, default=800)
     parser.add_argument("--d4c4-updates", type=int, default=800)
     parser.add_argument("--d4c5-updates", type=int, default=800)
+    parser.add_argument("--d4c5e-updates", type=int, default=2000)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -3990,6 +4244,8 @@ def main() -> None:
         raise SystemExit(0 if manifest["status"] == "PASS" else 1)
     if args.mode in ("d4c5", "all"):
         write_diag("d4c5_fixed_anchors.json", run_d4c5(updates=args.d4c5_updates))
+    if args.mode in ("d4c5e", "all"):
+        write_diag("d4c5e_fixed_anchor_extension.json", run_d4c5e(updates=args.d4c5e_updates))
 
 
 if __name__ == "__main__":
