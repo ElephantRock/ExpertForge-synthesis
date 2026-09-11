@@ -1,5 +1,17 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-C5 fixed-simplex persistent label anchors — COMPLETE: `INCONCLUSIVE` (lineage: code `a72cac4` = Commit Y → evidence in this commit)
+
+**Preflight (from literally clean Y, output under gitignored `local_data` until this commit): PASS on all five requirements.** Anchor algebra verified numerically (unit norms, pairwise cosines −0.5, centroid 9.9e-09, SHA-256 `2e15db23...`); synthetic realizability CE 0.36898103 vs analytic ln(1+2e^−1.5) = 0.36898114 (diff 7e-8); FIXED direct-vs-two-pass equivalence **bit-exact** (worst rel 0.0, loss diff 0.0); 128-example FIXED rehearsal clean (42 families); initial DYN-SG-vs-FIXED state-gradient relationship: **near-orthogonal** (cos 0.0236, norms 0.368/0.371) — the persistent frame supplies a genuinely different learning direction, not a rescaled batch-LOO signal.
+
+**Paired result (800 updates each; DYN-SG ran first and exactly reproduced the D4-C4 SG probes — zero mismatches — before FIXED proceeded):**
+- **DYN-SG (control):** `SELF_OPTIMIZATION_FAILED` — train FRA 1.11498, alignment −0.00075; identical to D4-C4 SG as required.
+- **FIXED:** `INCONCLUSIVE` per the frozen thresholds — train alignment **0.20869** (not < 0.25) and fixed-anchor CE **0.84266** (not ≥ 1.00) — the first objective configuration in the entire D4 series where both criteria move materially toward the success region (align −0.003 → 0.209 monotonically; CE 1.106 → 0.843 falling; training-batch applied loss 0.827 at u=800), both still trending at the horizon.
+- **The transfer caveat is sharp, however:** the unseen-family fixed-anchor CE *rises* to **1.3944** (above chance) while train-side CE falls, and eval_ID remains exactly 0.333333. At T800 the anchor-frame learning is family-specific: training-family residuals align progressively with the anchors while unseen-family residuals move away from them — the anchor-frame analogue of D4-B3's FIT_NO_TRANSFER pattern, with the added signal that the anti-alignment on unseen families exceeds chance.
+
+**Per the frozen interpretation: `INCONCLUSIVE`** — neither PERSISTENT_TARGET_CAUSAL nor FIXED_TARGET_INSUFFICIENT is established at 800 updates. The open question for the authority: whether an extension crosses align > 0.50 / CE < 0.80 on training families and whether ANY horizon converts train-side anchor alignment into unseen-family alignment (the rising unseen anchor CE argues against assuming it). Q2 remains UNQUALIFIED; Q3, corpus generation, v0.6 execution, and all other perturbations remain **held** pending Commit Z review.
+
+
 ## D4-C4 prototype-gradient coupling — COMPLETE: `COUPLING_NOT_BOTTLENECK` (lineage: code `400de59` = Commit W → evidence in this commit)
 
 **Preflight (from literally clean W, output under gitignored `local_data` until this commit): PASS.** The state-space gradient decomposition on the frozen 128-example batch at initialization measured: |g_FULL|=0.7499, |g_SG|=0.3681, |g_PROTO|=0.3823 (prototype component comparable to the query component, ratio 1.04); cos(g_FULL,g_SG)=0.9993, cos(g_SG,g_PROTO)=0.9974; **signed projection of the prototype component onto the query component +0.3813 — prototype backprop REINFORCES the query-side signal at init rather than cancelling it**. Forward losses bit-identical (diff 0.0). SG direct-vs-two-pass equivalence holds (worst rel 4.47e-05); SG 128-example rehearsal clean (42 families).
