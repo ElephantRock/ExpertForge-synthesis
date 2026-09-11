@@ -1,5 +1,17 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-C5E fixed-anchor horizon extension — COMPLETE: `PERSISTENT_TARGET_TRAIN_ONLY` (lineage: code `8fc4019` = Commit AA → evidence in this commit)
+
+**T800 reproduction gate PASSED** (from literally clean AA): every previously recorded probe scalar at T0/T200/T400/T800 exactly reproduced D4-C5 FIXED — zero mismatches — and the first-800 stream digest `84d47c02b97b023f...` is bound. The run then continued to the terminal 2,000-update horizon (no automatic extension per the release).
+
+**Terminal result (T2000):**
+- **Train gate CLEARED:** train mean alignment **0.898959** (> 0.50) and train fixed-anchor CE **0.411059** (< 0.80); train anchor-argmax accuracy **0.9861** with min label recall 0.958 — the model essentially solves the persistent-anchor objective on training families. Trajectory: align 0.209 (T800) → 0.763 (T1200) → 0.796 (T1600) → 0.899 (T2000); CE 0.843 → 0.411.
+- **Unseen-transfer gate FAILED:** unseen mean alignment **0.039378** (< 0.25) and unseen fixed-anchor CE **1.192603** (> 1.00); unseen argmax 0.4028, min recall 0.250. Noteworthy nuance: unseen anti-alignment PEAKED at T800 (CE 1.394) and then partially receded (1.249 → 1.209 → 1.193) while unseen alignment drifted from ~0 to +0.039 and unseen argmax rose 0.236 → 0.403 — a weak late drift toward the anchor frame, far below any transfer threshold.
+- eval surfaces remain at chance throughout (0.333333) — per the D4-C5E interpretation ruling, these are not load-bearing transfer measures for anchor-frame runs.
+
+**Joint terminal outcome: `PERSISTENT_TARGET_TRAIN_ONLY`** — persistent anchors make the representation objective fully learnable on training families (the first objective in the D4 series to clear any self-optimization gate), but within the terminal horizon the learned frame does not generalize to unseen families. This is the anchor-frame counterpart of the D4-B3 FIT_NO_TRANSFER result and completes a consistent picture across the diagnostics: this architecture under every tested objective fits family-specific structure without extracting a transferable relational rule. Q2 remains UNQUALIFIED; Q3, corpus generation, v0.6 execution, and all other perturbations remain **held** pending Commit AB review.
+
+
 ## D4-C5 fixed-simplex persistent label anchors — COMPLETE: `INCONCLUSIVE` (lineage: code `a72cac4` = Commit Y → evidence in this commit)
 
 **Preflight (from literally clean Y, output under gitignored `local_data` until this commit): PASS on all five requirements.** Anchor algebra verified numerically (unit norms, pairwise cosines −0.5, centroid 9.9e-09, SHA-256 `2e15db23...`); synthetic realizability CE 0.36898103 vs analytic ln(1+2e^−1.5) = 0.36898114 (diff 7e-8); FIXED direct-vs-two-pass equivalence **bit-exact** (worst rel 0.0, loss diff 0.0); 128-example FIXED rehearsal clean (42 families); initial DYN-SG-vs-FIXED state-gradient relationship: **near-orthogonal** (cos 0.0236, norms 0.368/0.371) — the persistent frame supplies a genuinely different learning direction, not a rescaled batch-LOO signal.
