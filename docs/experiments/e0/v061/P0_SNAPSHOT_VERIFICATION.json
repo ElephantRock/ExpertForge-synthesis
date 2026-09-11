@@ -1,0 +1,70 @@
+{
+  "schema_id": "E0-V061-P0-SNAPSHOT-VERIFICATION-v0",
+  "authority": "V06_MECHANISM_BOOTSTRAP_AUTHORIZED (SHA-256 937ff955...) — scope item: exact P0 snapshot/digest/license/interface capture",
+  "diagnostic_only": false,
+  "bootstrap_only": true,
+  "model_scoring_performed": false,
+  "candidate_id": "P0-70M",
+  "upstream_id": "EleutherAI/pythia-70m",
+  "upstream_revision": "a39f36b100fe8a5377810d56c3f4789b9c53ac42",
+  "captured_utc": "2026-09-11T21:55:00Z",
+  "snapshot_local_path": "C:/huggingface_cache/hub/models--EleutherAI--pythia-70m/snapshots/a39f36b100fe8a5377810d56c3f4789b9c53ac42",
+  "file_digests": {
+    "config.json": "002050231a9b1ec3ac77aa6b9b3bbdc4d923f4068a7dd33b8da72a9bd6ad9a43",
+    "model.safetensors": "ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15",
+    "special_tokens_map.json": "6f50ab5a5a509a1c309d6171f339b196a900dc9c99ad0408ff23bb615fdae7ad",
+    "tokenizer.json": "c24618a1b3e6a38167beff1c72cffd126c3a66254347304b50547d12c5f25624",
+    "tokenizer_config.json": "70e38394e494931c6f773ba41e19460dd4436526b852207367f04341b4066d3f",
+    "README.md": "9a572054d777a1380b67740844abf986e5e077f53e518afbf7dd2193935f4de7"
+  },
+  "weights_verification": {
+    "model_safetensors_sha256_local": "ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15",
+    "model_safetensors_sha256_observed_upstream": "ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15",
+    "match": true,
+    "bytes": 166029852
+  },
+  "config_architecture_matches_registry": {
+    "hidden_size_512": true,
+    "num_hidden_layers_6": true,
+    "num_attention_heads_8": true,
+    "intermediate_size_2048": true,
+    "max_position_embeddings_2048": true,
+    "vocab_size_50304": true,
+    "rotary_emb_base_10000": true,
+    "rotary_pct_0.25": true,
+    "hidden_act_gelu": true,
+    "use_parallel_residual_true": true,
+    "tie_word_embeddings_false": true,
+    "architectures_GPTNeoXForCausalLM": true
+  },
+  "classification_form_instantiated_verification": {
+    "runtime": "torch 2.14.0+cu126 / transformers 5.16.1",
+    "total_instantiated_params_with_lm_head": 70426624,
+    "lm_head_params": 25755648,
+    "lm_head_untied_note": "checkpoint key 'embed_out.weight' maps to runtime module 'lm_head' in transformers 5.x; distinct storage and distinct values from gpt_neox.embed_in.weight (genuinely untied)",
+    "backbone_without_lm_head_including_embeddings": 44670976,
+    "backbone_matches_registry_expected": true,
+    "task_classifier_512_to_3_with_bias": 1539,
+    "total_classification_form": 44672515,
+    "total_matches_registry_expected": true
+  },
+  "checkpoint_tensor_facts": {
+    "safetensors_tensor_count": 94,
+    "stores_embed_out_separately": true,
+    "stores_embed_in_separately": true
+  },
+  "license_record": {
+    "license_file_at_pinned_revision": null,
+    "finding": "no standalone LICENSE file exists at the pinned revision; repo files are [.gitattributes, README.md, config.json, model.safetensors, pytorch_model.bin, special_tokens_map.json, tokenizer.json, tokenizer_config.json]",
+    "license_statement_location": "README.md model card (Apache-2.0)",
+    "readme_sha256_bound_as_license_record": "9a572054d777a1380b67740844abf986e5e077f53e518afbf7dd2193935f4de7",
+    "open_item": "authority may wish to confirm README-based license binding is acceptable for the registry's license_record_sha256 QUAL-BOUND field, or supply the canonical Pythia license text artifact"
+  },
+  "tokenizer_preliminary": {
+    "loads_from_snapshot": true,
+    "tokenizer_vocab_size": 50254,
+    "tokenizer_len_including_added": 50277,
+    "note": "full CMDR token-length audit is a separate authorized bootstrap item and was NOT performed here"
+  },
+  "pytorch_model_bin_note": "revision also contains pytorch_model.bin (duplicate format); intentionally not downloaded; model.safetensors is the bound weights artifact"
+}
