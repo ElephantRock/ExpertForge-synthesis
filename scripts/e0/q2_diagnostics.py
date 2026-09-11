@@ -2251,10 +2251,46 @@ D4C2_PREFLIGHT_OUT = (
 )
 
 
+# ------------------------------------------------------------------ D4-C5 ----
+
+D4C5_PREFLIGHT_OUT = (
+    REPO_ROOT / "local_data" / "e0_qualification_bootstrap" / "DIAG" / "d4c5_preflight.json"
+)
+
+
+def _fixed_label_anchors(device, dim: int = 512) -> torch.Tensor:
+    """Analytic fixed-simplex label anchors (issue #3 D4-C5):
+    u = (+,-,+,-,...)/sqrt(dim), v = (+,+,-,-,...)/sqrt(dim);
+    t_E = u; t_C = -u/2 + sqrt(3)v/2; t_U = -u/2 - sqrt(3)v/2.
+    Unit norm, pairwise cosine -0.5, centroid exactly zero."""
+    idx = torch.arange(dim, dtype=torch.float32)
+    u = torch.where(idx % 2 == 0, 1.0, -1.0) / (float(dim) ** 0.5)
+    v = torch.where((idx // 2) % 2 == 0, 1.0, -1.0) / (float(dim) ** 0.5)
+    anchors = torch.stack([
+        u,
+        -0.5 * u + (3.0 ** 0.5 / 2.0) * v,
+        -0.5 * u - (3.0 ** 0.5 / 2.0) * v,
+    ])
+    return anchors.to(device)
+
+
+def _fixed_anchor_loss_from_grouped(h: torch.Tensor, anchors: torch.Tensor) -> torch.Tensor:
+    """FIXED-arm loss: CE over anchor logits a_{f,l,k} = z_{f,l} . t_k (tau=1)
+    against each slot's own label; anchors are constants (no gradient), the
+    within-family residual centering remains differentiable."""
+    n_fam = h.shape[0]
+    r = h - h.mean(dim=1, keepdim=True)
+    z = r / torch.clamp(r.norm(dim=-1, keepdim=True), min=FRA_EPS)
+    logits = torch.einsum("fld,kd->flk", z, anchors)
+    targets = torch.arange(3, device=h.device).unsqueeze(0).expand(n_fam, 3).reshape(-1)
+    return F.cross_entropy(logits.reshape(-1, 3), targets)
+
+
 def _d4c2_effective_batch_step(model, hook: ClassifierDecideStateHook, batch_indices: list[int],
                                train_rows: list[dict], fam_of_sid: dict[str, str], device,
                                tau: float = 1.0, return_states: bool = False,
-                               stop_prototype_grad: bool = False) -> dict:
+                               stop_prototype_grad: bool = False,
+                               fixed_anchors: torch.Tensor | None = None) -> dict:
     """Two-pass exact-VJP full-effective-batch FRA step computation.
 
     Pass 1 (no_grad): forward the 8 microbatches, collect all 128 <DECIDE>
@@ -2295,16 +2331,26 @@ def _d4c2_effective_batch_step(model, hook: ClassifierDecideStateHook, batch_ind
     flat_idx = torch.tensor([p for _, slots in ordered for p in slots], device=states.device)
 
     h_proxy = states.detach().clone().requires_grad_(True)
-    loss, _ = _fra_loss_from_grouped(
-        h_proxy.index_select(0, flat_idx).view(n_fam, 3, -1), tau=tau,
-        stop_prototype_grad=stop_prototype_grad,
-    )
+    if fixed_anchors is not None:
+        # D4-C5 FIXED: CE against immutable analytic anchor vectors (tau=1);
+        # anchors carry no gradient, so the state gradient flows through the
+        # query residuals only — a persistent cross-batch target frame.
+        loss = _fixed_anchor_loss_from_grouped(
+            h_proxy.index_select(0, flat_idx).view(n_fam, 3, -1), fixed_anchors
+        )
+        with torch.no_grad():
+            untempered = loss.detach().clone()
+    else:
+        loss, _ = _fra_loss_from_grouped(
+            h_proxy.index_select(0, flat_idx).view(n_fam, 3, -1), tau=tau,
+            stop_prototype_grad=stop_prototype_grad,
+        )
+        with torch.no_grad():
+            untempered, _ = _fra_loss_from_grouped(
+                states.detach().index_select(0, flat_idx).view(n_fam, 3, -1), tau=1.0
+            )
     loss.backward()
     g_full = h_proxy.grad.detach().clone()
-    with torch.no_grad():
-        untempered, _ = _fra_loss_from_grouped(
-            states.detach().index_select(0, flat_idx).view(n_fam, 3, -1), tau=1.0
-        )
 
     for micro in range(GRAD_ACCUM):
         rows = rows_all[micro * MICROBATCH : (micro + 1) * MICROBATCH]
@@ -3440,9 +3486,422 @@ def run_d4c4(updates: int = 800) -> dict:
     })
 
 
+def run_d4c5_preflight() -> dict:
+    """D4-C5 preflight: anchor algebra/digest, synthetic realizability at the
+    ideal CE (~0.369), direct-vs-two-pass FIXED gradient equivalence, a real
+    128-example FIXED rehearsal, and the initial DYN-SG-vs-FIXED state-gradient
+    relationship. Output stays outside docs/. Fail closed."""
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    anchors = _fixed_label_anchors(device, dim=512)
+
+    norms = [float(anchors[i].norm()) for i in range(3)]
+    cos_ec = float(torch.dot(anchors[0], anchors[1]))
+    cos_eu = float(torch.dot(anchors[0], anchors[2]))
+    cos_cu = float(torch.dot(anchors[1], anchors[2]))
+    centroid_norm = float(anchors.mean(dim=0).norm())
+    anchor_digest = hashlib.sha256(anchors.cpu().numpy().tobytes()).hexdigest()
+    anchor_check = {
+        "norms": norms,
+        "pairwise_cosines": {"E_C": cos_ec, "E_U": cos_eu, "C_U": cos_cu},
+        "centroid_norm": centroid_norm,
+        "sha256": anchor_digest,
+        "ok": all(abs(n - 1.0) < 1e-6 for n in norms)
+        and abs(cos_ec + 0.5) < 1e-6 and abs(cos_eu + 0.5) < 1e-6 and abs(cos_cu + 0.5) < 1e-6
+        and centroid_norm < 1e-6,
+    }
+
+    # synthetic realizability: residuals equal to anchors give the ideal CE
+    with torch.no_grad():
+        synthetic_h = anchors.unsqueeze(0).expand(4, 3, -1).clone().requires_grad_(False)
+        ideal_ce = float(_fixed_anchor_loss_from_grouped(synthetic_h, anchors))
+    import math as _math
+    analytic = _math.log(1.0 + 2.0 * _math.exp(-1.5))
+    realizability = {
+        "synthetic_ideal_ce": ideal_ce,
+        "analytic_ideal_ce": analytic,
+        "abs_diff": abs(ideal_ce - analytic),
+        "ok": abs(ideal_ce - analytic) < 1e-5,
+    }
+
+    # direct-vs-two-pass FIXED equivalence on one real 16-example microbatch
+    from m0_model import build_model
+
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    train_rows, _ = load_split(REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", "train_ID")
+    fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+    sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+    fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+    stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+    rows = [train_rows[i] for i in stream.take(128)[0:MICROBATCH]]
+    ids, decide, labels = collate(rows, device)
+
+    model_a = build_model("C0", DIAG_SEED, device)
+    hook_a = ClassifierDecideStateHook(model_a.classifier)
+    hook_a.captured["active"] = True
+    model_a(ids, decide)
+    hook_a.captured["active"] = False
+    positions = {}
+    for pos, row in enumerate(rows):
+        positions.setdefault(fam_of_sid[row["sample_id"]], {})[row["label_id"]] = pos
+    ordered = [(fid, [s[0], s[1], s[2]]) for fid, s in sorted(positions.items()) if set(s) == {0, 1, 2}]
+    flat_idx = torch.tensor([p for _, s in ordered for p in s], device=device)
+
+    loss_a = _fixed_anchor_loss_from_grouped(
+        hook_a.captured["tensor"].index_select(0, flat_idx).view(len(ordered), 3, -1), anchors
+    )
+    model_a.zero_grad(set_to_none=True)
+    loss_a.backward()
+    grads_a = {
+        name: (p.grad.detach().clone() if p.grad is not None else None)
+        for name, p in model_a.named_parameters()
+    }
+
+    model_b = build_model("C0", DIAG_SEED, device)
+    hook_b = ClassifierDecideStateHook(model_b.classifier)
+    hook_b.captured["active"] = True
+    with torch.no_grad():
+        model_b(ids, decide)
+    hook_b.captured["active"] = False
+    states = hook_b.captured["tensor"].float()
+    h_proxy = states.detach().clone().requires_grad_(True)
+    loss_b = _fixed_anchor_loss_from_grouped(
+        h_proxy.index_select(0, flat_idx).view(len(ordered), 3, -1), anchors
+    )
+    loss_b.backward()
+    g = h_proxy.grad.detach().clone()
+    model_b.zero_grad(set_to_none=True)
+    hook_b.captured["active"] = True
+    model_b(ids, decide)
+    hook_b.captured["active"] = False
+    hook_b.captured["tensor"].backward(gradient=g)
+    grads_b = {
+        name: (p.grad.detach().clone() if p.grad is not None else None)
+        for name, p in model_b.named_parameters()
+    }
+
+    worst_rel, min_cos = 0.0, 1.0
+    for name in grads_a:
+        a, b = grads_a[name], grads_b[name]
+        if a is None and b is None:
+            continue
+        if a is None or b is None:
+            worst_rel = float("inf")
+            break
+        norm_a = float(a.norm())
+        if norm_a > 0:
+            worst_rel = max(worst_rel, float((a - b).norm()) / norm_a)
+            min_cos = min(min_cos, float(F.cosine_similarity(a.flatten(), b.flatten(), dim=0)))
+    equivalence = {
+        "direct_loss": float(loss_a.detach()),
+        "proxy_loss": float(loss_b.detach()),
+        "loss_diff": abs(float(loss_a.detach()) - float(loss_b.detach())),
+        "worst_relative_l2_diff": worst_rel,
+        "min_gradient_cosine": min_cos,
+        "equivalent": worst_rel <= 1e-4 and min_cos >= 0.999999,
+        "tolerance": {"worst_relative_l2": 1e-4, "min_cosine": 0.999999},
+    }
+
+    # initial DYN-SG vs FIXED state-gradient relationship on the frozen 128-batch
+    model_c = build_model("C0", DIAG_SEED, device)
+    hook_c = ClassifierDecideStateHook(model_c.classifier)
+    rows_all = [train_rows[i] for i in FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED).take(128)]
+    states_c = []
+    for micro in range(GRAD_ACCUM):
+        rws = rows_all[micro * MICROBATCH : (micro + 1) * MICROBATCH]
+        i2, d2, _ = collate(rws, device)
+        hook_c.captured["active"] = True
+        with torch.no_grad():
+            model_c(i2, d2)
+        hook_c.captured["active"] = False
+        states_c.append(hook_c.captured["tensor"].float())
+    states_c = torch.cat(states_c, dim=0)
+    positions_c = {}
+    for pos, row in enumerate(rows_all):
+        positions_c.setdefault(fam_of_sid[row["sample_id"]], {})[row["label_id"]] = pos
+    ordered_c = [(fid, [s[0], s[1], s[2]]) for fid, s in sorted(positions_c.items()) if set(s) == {0, 1, 2}]
+    flat_c = torch.tensor([p for _, s in ordered_c for p in s], device=device)
+
+    def state_grad(mode: str) -> torch.Tensor:
+        hp = states_c.detach().clone().requires_grad_(True)
+        grouped = hp.index_select(0, flat_c).view(len(ordered_c), 3, -1)
+        if mode == "dyn_sg":
+            loss, _ = _fra_loss_from_grouped(grouped, tau=1.0, stop_prototype_grad=True)
+        else:
+            loss = _fixed_anchor_loss_from_grouped(grouped, anchors)
+        loss.backward()
+        return hp.grad.detach().clone()
+
+    g_dyn = state_grad("dyn_sg")
+    g_fix = state_grad("fixed")
+    gradient_relationship = {
+        "g_dyn_sg_norm": float(g_dyn.norm()),
+        "g_fixed_norm": float(g_fix.norm()),
+        "cos_g_dyn_g_fixed": float(F.cosine_similarity(g_dyn.flatten(), g_fix.flatten(), dim=0)),
+    }
+
+    # one discarded real 128-example FIXED update rehearsal
+    ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                           REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+    device2, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+    train_rows2 = ctx["train_rows"]
+    sid_to_idx2 = {r["sample_id"]: i for i, r in enumerate(train_rows2)}
+    stream2 = FamilyCoherentStream(fc_rows, sid_to_idx2, DIAG_SEED)
+    hook2 = ClassifierDecideStateHook(model.classifier)
+    optimizer.zero_grad(set_to_none=True)
+    step = _d4c2_effective_batch_step(
+        model, hook2, stream2.take(128), train_rows2, fam_of_sid, device2,
+        tau=1.0, fixed_anchors=_fixed_label_anchors(device2, dim=512),
+    )
+    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+    optimizer.step()
+    params_finite = all(bool(torch.isfinite(p.data).all()) for p in model.parameters())
+    rehearsal = {
+        "full_batch_complete_families": step["full_batch_complete_families"],
+        "fixed_loss": step["fra_loss"],
+        "vjp_nonzero_finite": step["vjp_nonzero_finite"],
+        "grad_norm_pre_clip": float(grad_norm),
+        "params_finite_after_step": params_finite,
+        "ok": step["full_batch_complete_families"] >= FRA_MIN_FAMILIES
+        and step["vjp_nonzero_finite"] and bool(torch.isfinite(grad_norm)) and params_finite,
+    }
+
+    ok = anchor_check["ok"] and realizability["ok"] and equivalence["equivalent"] and rehearsal["ok"]
+    manifest = diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C5-PREFLIGHT-v0",
+        "authority": "issue #3 D4-C5 (fixed-simplex persistent label anchors, comment 5635114263) preflight",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "effective_updates": 1,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == "",
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": sum(p.numel() for p in model.parameters()),
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "output_location_note": "written under local_data (gitignored) so the D4-C5 run records a literally clean tree",
+        "checks": {
+            "anchor_algebra": anchor_check,
+            "synthetic_realizability": realizability,
+            "fixed_equivalence": equivalence,
+            "initial_gradient_relationship": gradient_relationship,
+            "rehearsal": rehearsal,
+        },
+        "model_discarded": True,
+        "status": "PASS" if ok else "FAIL",
+    })
+    del model, optimizer
+    torch.cuda.empty_cache()
+    return manifest
+
+
+def run_d4c5(updates: int = 800) -> dict:
+    """D4-C5 fixed-simplex persistent label anchors: paired DYN-SG (exact
+    D4-C4 SG control; must reproduce D4-C4 SG first) vs FIXED (immutable
+    analytic anchor targets). Everything else frozen."""
+    raw_train = [json.loads(line) for line in
+                 (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/train_ID.jsonl").open(encoding="utf-8")]
+    raw_eval = [json.loads(line) for line in
+                (REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1/eval_ID.jsonl").open(encoding="utf-8")]
+    unseen_rows, unseen_digest = _d4a_probe_rows(raw_eval)
+    d3_train_rows, _d3_hold, d3_meta = d3_family_sets(raw_train)
+    d3_train_digest = d3_meta["train_family_list_sha256"]
+
+    d4c4 = json.loads((DIAG_DIR / "d4c4_prototype_coupling.json").read_text(encoding="utf-8"))
+    d4c4_sg_probes = d4c4["arms"]["SG"]["probes"]
+
+    arms: dict[str, dict] = {}
+    for arm in ("DYN-SG", "FIXED"):
+        ctx = scientific_setup("C0", "exclude_norm_bias", DIAG_SEED,
+                               REPO_ROOT / "local_data/e0_qualification_bootstrap/Q1", REPO_ROOT)
+        device, model, optimizer = ctx["device"], ctx["model"], ctx["optimizer"]
+        train_rows = ctx["train_rows"]
+        tree_clean = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip() == ""
+        fc_rows = _build_family_rows(raw_train, sorted({r["family_id"] for r in raw_train}))
+        sid_to_idx = {r["sample_id"]: i for i, r in enumerate(train_rows)}
+        fam_of_sid = {r["sample_id"]: r["family_id"] for r in raw_train}
+        stream = FamilyCoherentStream(fc_rows, sid_to_idx, DIAG_SEED)
+        hook = ClassifierDecideStateHook(model.classifier)
+        anchors = _fixed_label_anchors(device, dim=512) if arm == "FIXED" else None
+
+        telemetry: list[dict] = []
+        probes: dict[str, dict] = {}
+        family_counts: list[int] = []
+
+        def fixed_probe(rows: list[dict]) -> float:
+            model.eval()
+            i2, d2, _ = collate(rows, device)
+            with torch.no_grad():
+                hook.captured["active"] = True
+                model(i2, d2)
+                hook.captured["active"] = False
+                h = hook.captured["tensor"].float()
+                loss = _fixed_anchor_loss_from_grouped(h.view(len(rows) // 3, 3, -1), anchors)
+            model.train()
+            return float(loss)
+
+        def capture(tag: str, update: int) -> None:
+            probes[tag] = {
+                "update": update,
+                "train_ID": _eval_surface_metrics(model, train_rows, device),
+                "eval_ID": _eval_surface_metrics(model, ctx["eval_id_rows"], device),
+                "eval_STRUCT": _eval_surface_metrics(model, ctx["eval_struct_rows"], device),
+                "train_family_geometry": _d3_probe_geometry(model, d3_train_rows, device),
+                "unseen_family_geometry": _d3_probe_geometry(model, unseen_rows, device),
+                "fra_loss_train_probe": _fra_loss_probe(model, hook, d3_train_rows, device, tau=1.0),
+                "fra_loss_unseen_probe": _fra_loss_probe(model, hook, unseen_rows, device, tau=1.0),
+            }
+            if arm == "FIXED":
+                probes[tag]["fixed_anchor_ce_train_probe"] = fixed_probe(d3_train_rows)
+                probes[tag]["fixed_anchor_ce_unseen_probe"] = fixed_probe(unseen_rows)
+            disp = probes[tag]["train_family_geometry"]["cross_family_displacement"]
+            mean_align = sum(
+                disp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+            ) / 3.0
+            extra = (
+                f" fixedCE={probes[tag]['fixed_anchor_ce_train_probe']:.4f}" if arm == "FIXED" else ""
+            )
+            print(
+                f"[D4C5 {arm}] probe {tag}: FRA={probes[tag]['fra_loss_train_probe']:.4f}"
+                f"{extra} align={mean_align:.4f} eval_ID={probes[tag]['eval_ID']['cmdr_sma']:.6f}",
+                flush=True,
+            )
+
+        torch.cuda.reset_peak_memory_stats(device)
+        capture("T0", 0)
+        started = time.time()
+        for update in range(1, updates + 1):
+            lr = learning_rate(update)
+            for group in optimizer.param_groups:
+                group["lr"] = lr
+            batch_indices = stream.take(128)
+            optimizer.zero_grad(set_to_none=True)
+            step = _d4c2_effective_batch_step(
+                model, hook, batch_indices, train_rows, fam_of_sid, device,
+                tau=1.0, stop_prototype_grad=(arm == "DYN-SG"), fixed_anchors=anchors,
+            )
+            family_counts.append(step["full_batch_complete_families"])
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            optimizer.step()
+            if update <= 200 or update % 10 == 0:
+                telemetry.append({
+                    "update": update, "lr": lr,
+                    "update_full_batch_applied_loss": step["fra_loss"],
+                    "full_batch_complete_families": step["full_batch_complete_families"],
+                    "vjp_norm": step["vjp_norm"],
+                    "grad_norm_pre_clip": float(grad_norm),
+                })
+            if update in D4C1_PROBE_UPDATES:
+                capture(f"T{update}", update)
+        wall = time.time() - started
+
+        if arm == "DYN-SG":
+            mismatches = []
+            for tag in ("T0", "T200", "T400", "T800"):
+                mine, ref = probes[tag], d4c4_sg_probes[tag]
+                for name, path in [
+                    ("train_FRA", ("fra_loss_train_probe",)),
+                    ("unseen_FRA", ("fra_loss_unseen_probe",)),
+                    ("eval_ID_SMA", ("eval_ID", "cmdr_sma")),
+                    ("eval_STRUCT_SMA", ("eval_STRUCT", "cmdr_sma")),
+                    ("align_E_minus_C", ("train_family_geometry", "cross_family_displacement", "E_minus_C", "mean_pairwise_cos")),
+                ]:
+                    a, b = mine, ref
+                    for k in path:
+                        a = a[k]
+                        b = b[k]
+                    if a != b:
+                        mismatches.append({"probe": tag, "metric": name, "new": a, "d4c4_sg": b})
+            reproduction = {"probes_compared": 4, "mismatches": mismatches, "reproduced": not mismatches}
+            if mismatches:
+                DIAG_DIR.mkdir(parents=True, exist_ok=True)
+                (DIAG_DIR / "d4c5_dynsg_reproduction_failure.json").write_text(
+                    json.dumps(reproduction, indent=2), encoding="utf-8"
+                )
+                raise SystemExit(
+                    f"D4-C5 DYN-SG gate FAILED: {len(mismatches)} mismatches vs D4-C4 SG; FIXED not started."
+                )
+
+        final = probes[f"T{updates}"]
+        disp = final["train_family_geometry"]["cross_family_displacement"]
+        mean_align = sum(
+            disp[name]["mean_pairwise_cos"] for name in ("E_minus_C", "E_minus_U", "C_minus_U")
+        ) / 3.0
+        if arm == "FIXED":
+            criterion_ce = final["fixed_anchor_ce_train_probe"]
+        else:
+            criterion_ce = final["fra_loss_train_probe"]
+        if mean_align > 0.50 and criterion_ce < 0.80:
+            arm_endpoint = "SELF_OPTIMIZES"
+        elif mean_align < 0.25 and criterion_ce >= 1.00:
+            arm_endpoint = "SELF_OPTIMIZATION_FAILED"
+        else:
+            arm_endpoint = "INCONCLUSIVE"
+
+        arms[arm] = {
+            "working_tree_clean_at_start": tree_clean,
+            "parameter_count": sum(p.numel() for p in model.parameters()),
+            "telemetry": telemetry,
+            "probes": probes,
+            "wall_seconds": round(wall, 1),
+            "final_train_mean_alignment": mean_align,
+            "final_criterion_ce": criterion_ce,
+            "effective_batch_family_counts": {
+                "min": min(family_counts), "max": max(family_counts),
+                "mean": sum(family_counts) / len(family_counts), "updates": len(family_counts),
+            },
+            "arm_endpoint": arm_endpoint,
+            "d4c4_sg_reproduction": reproduction if arm == "DYN-SG" else None,
+        }
+        del model, optimizer
+        torch.cuda.empty_cache()
+
+    dyn_ep = arms["DYN-SG"]["arm_endpoint"]
+    fixed_ep = arms["FIXED"]["arm_endpoint"]
+    if dyn_ep == "SELF_OPTIMIZATION_FAILED" and fixed_ep == "SELF_OPTIMIZES":
+        pattern = "PERSISTENT_TARGET_CAUSAL"
+    elif dyn_ep == "SELF_OPTIMIZATION_FAILED" and fixed_ep == "SELF_OPTIMIZATION_FAILED":
+        pattern = "FIXED_TARGET_INSUFFICIENT"
+    elif dyn_ep == "SELF_OPTIMIZES":
+        pattern = "STOP_REPRODUCIBILITY_DIAGNOSIS"
+    else:
+        pattern = "INCONCLUSIVE"
+
+    return diag_header({
+        "schema_id": "E0-Q2-DIAG-D4C5-FIXED-ANCHORS-v0",
+        "authority": "issue #3 D4-C5 (fixed-simplex persistent label anchors, comment 5635114263); DYN-SG must exactly reproduce D4-C4 SG before FIXED proceeds",
+        "diagnostic_only": True,
+        "non_scientific": True,
+        "candidate": "C0", "seed": DIAG_SEED, "updates": updates,
+        "wd_scope": "exclude_norm_bias",
+        "working_tree_clean_at_start": arms["FIXED"]["working_tree_clean_at_start"],
+        "code_git_commit": subprocess_git_head(REPO_ROOT),
+        "parameter_count": arms["FIXED"]["parameter_count"],
+        "verified_q1_input_digests": ctx["verified_digests"],
+        "anchor_sha256": hashlib.sha256(_fixed_label_anchors(torch.device("cpu"), dim=512).numpy().tobytes()).hexdigest(),
+        "fra_config": {
+            "dyn_sg": "exact D4-C4 SG control: batch LOO prototypes from z.detach(), tau=1",
+            "fixed": "immutable analytic anchor vectors t_E/t_C/t_U (unit norm, pairwise cos -0.5, zero centroid); CE over anchor logits, tau=1; two-pass VJP; 42-family support",
+        },
+        "d3_train_probe_family_list_sha256": d3_train_digest,
+        "unseen_probe_family_list_sha256": unseen_digest,
+        "endpoint_criteria": {
+            "per_arm": "SELF_OPTIMIZES: align > 0.50 AND criterion CE < 0.80; FAILED: align < 0.25 AND criterion CE >= 1.00; criterion CE = fixed-anchor CE for FIXED, canonical LOO FRA for DYN-SG",
+            "pattern": "DYN-SG fails + FIXED optimizes -> PERSISTENT_TARGET_CAUSAL; both fail -> FIXED_TARGET_INSUFFICIENT; DYN-SG succeeds -> STOP_REPRODUCIBILITY_DIAGNOSIS; else INCONCLUSIVE",
+        },
+        "arms": arms,
+        "observed_pattern": pattern,
+    })
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "d4c2", "d4c2-preflight", "d4c3", "d4c3-preflight", "d4c4", "d4c4-preflight", "all"])
+    parser.add_argument("mode", choices=["d0", "d1", "d2", "d3", "d4a", "d4b", "d4b2", "d4b3", "d4c", "d4c-preflight", "d4c1", "d4c1-preflight", "d4c2", "d4c2-preflight", "d4c3", "d4c3-preflight", "d4c4", "d4c4-preflight", "d4c5", "d4c5-preflight", "all"])
     parser.add_argument("--d0-updates", type=int, default=2000)
     parser.add_argument("--d1-updates", type=int, default=2000)
     parser.add_argument("--d3-updates", type=int, default=2000)
@@ -3455,6 +3914,7 @@ def main() -> None:
     parser.add_argument("--d4c2-updates", type=int, default=800)
     parser.add_argument("--d4c3-updates", type=int, default=800)
     parser.add_argument("--d4c4-updates", type=int, default=800)
+    parser.add_argument("--d4c5-updates", type=int, default=800)
     args = parser.parse_args()
 
     torch.use_deterministic_algorithms(True)
@@ -3519,6 +3979,17 @@ def main() -> None:
         raise SystemExit(0 if manifest["status"] == "PASS" else 1)
     if args.mode in ("d4c4", "all"):
         write_diag("d4c4_prototype_coupling.json", run_d4c4(updates=args.d4c4_updates))
+    if args.mode in ("d4c5-preflight", "all"):
+        manifest = run_d4c5_preflight()
+        D4C5_PREFLIGHT_OUT.parent.mkdir(parents=True, exist_ok=True)
+        NL = chr(10)
+        D4C5_PREFLIGHT_OUT.write_text(
+            json.dumps(manifest, indent=2) + NL, encoding="utf-8", newline=NL
+        )
+        print(f"wrote {D4C5_PREFLIGHT_OUT} (outside docs/ - tree stays literally clean)")
+        raise SystemExit(0 if manifest["status"] == "PASS" else 1)
+    if args.mode in ("d4c5", "all"):
+        write_diag("d4c5_fixed_anchors.json", run_d4c5(updates=args.d4c5_updates))
 
 
 if __name__ == "__main__":
