@@ -1,5 +1,17 @@
 # E0 Windows Local Bootstrap Status
 
+## D4-C4 prototype-gradient coupling — COMPLETE: `COUPLING_NOT_BOTTLENECK` (lineage: code `400de59` = Commit W → evidence in this commit)
+
+**Preflight (from literally clean W, output under gitignored `local_data` until this commit): PASS.** The state-space gradient decomposition on the frozen 128-example batch at initialization measured: |g_FULL|=0.7499, |g_SG|=0.3681, |g_PROTO|=0.3823 (prototype component comparable to the query component, ratio 1.04); cos(g_FULL,g_SG)=0.9993, cos(g_SG,g_PROTO)=0.9974; **signed projection of the prototype component onto the query component +0.3813 — prototype backprop REINFORCES the query-side signal at init rather than cancelling it**. Forward losses bit-identical (diff 0.0). SG direct-vs-two-pass equivalence holds (worst rel 4.47e-05); SG 128-example rehearsal clean (42 families).
+
+**Paired result (800 updates each; FULL ran first and exactly reproduced D4-C2 at all four probes across five metric families — zero mismatches — before SG proceeded):**
+- **FULL:** train FRA probe loss 1.1391, mean alignment −0.0052 → `FRA_SELF_OPTIMIZATION_FAILED` (D4-C2 replication).
+- **SG:** train FRA probe loss 1.1150, mean alignment −0.0007 → `FRA_SELF_OPTIMIZATION_FAILED`. Pre-clip grad norms 1.35 (u=1) → 3.43 (u=800) — above the frozen clip of 1.0, so the applied gradient is ~unit-norm; removing the (reinforcing) prototype component roughly halved the raw gradient, exactly as the decomposition predicted, without changing the outcome.
+- **New observables (both arms):** cosine-logit spread DOES widen from 0.171 at init to ~0.29–0.45 mid-run (correcting the earlier wording point — spread widened; it just never became label-aligned), while the target margin stays negative throughout (FULL −0.133, SG −0.109 at T800) and residual norms remain 0.04–0.08 against state norms of order 10.
+
+**Per the frozen interpretation: `COUPLING_NOT_BOTTLENECK` — prototype-gradient coupling is not the bottleneck; the next target per the release is a persistent/fixed cross-batch target formulation.** The observables sharpen the picture: training widens logit spread without producing positive target margins or cross-family alignment — the residuals are learning *some* consistent structure that is not the label geometry. Q2 remains UNQUALIFIED; Q3, corpus generation, v0.6 execution, and all other perturbations remain **held** pending Commit X review.
+
+
 ## D4-C3 fixed-temperature FRA (τ=0.25) — COMPLETE: `FRA_SELF_OPTIMIZATION_FAILED` (lineage: code `211d163` = Commit U → evidence in this commit)
 
 **Preflight (from literally clean U, output under gitignored `local_data` until this commit): PASS.** τ=0.25 direct-vs-VJP equivalence holds (worst rel 4.06e-05, min cosine 0.99999988, loss diff exactly 0). The frozen-batch τ comparison quantified what temperature actually changes at init: VJP norm amplification ×4.09 (largely normalized by the frozen grad clip — pre-clip norms 11.0 at u=1) with only mild rotation of the gradient direction (cosine 0.9946 between τ=1 and τ=0.25 VJPs). Tempered rehearsal: 42 families, all finite.
