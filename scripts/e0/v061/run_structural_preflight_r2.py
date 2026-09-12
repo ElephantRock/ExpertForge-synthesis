@@ -206,102 +206,157 @@ class _GIExceeded(RuntimeError):
     pass
 
 
+def _variant_to_nx(example: dict):
+    """Encode one variant as an attributed networkx DiGraph for VF2:
+    predicate/entity nodes (kind attribute) plus one attribute-rich node per
+    literal slot (fact/premise/conclusion/query role, polarity, grounding);
+    meta node carries the depth stratum. Independent of structsig_r2
+    canonical labeling."""
+    import networkx as nx
+
+    facts, rules, query, depth, preds, ents = structsig_r2._extract(example)
+    g = nx.DiGraph()
+    g.add_node(("meta",), kind="meta", depth=depth)
+    for p in preds:
+        g.add_node(("P", p), kind="P")
+    for e in ents:
+        g.add_node(("E", e), kind="E")
+
+    def add_lit(l, role, eid):
+        pid = ("slot",) + eid + (role, l[0], id(l) % 1)
+        g.add_node(pid, kind=role, sign=l[0], grounded=l[2] != "x")
+        g.add_edge(("P", l[1]), pid, etype="holds")
+        if l[2] != "x":
+            g.add_edge(("E", l[2]), pid, etype="holds")
+        return pid
+
+    for i, f in enumerate(facts):
+        add_lit(f, "fact", ("f", i))
+    for i, (prem, concl) in enumerate(rules):
+        for j, l in enumerate(prem):
+            add_lit(l, "prem", ("r", i, j))
+        add_lit(concl, "concl", ("r", i, "c"))
+    qnode = add_lit(query, "query", ("q",))
+    g.add_edge(("meta",), qnode, etype="query")
+    return g
+
+
 def _typed_isomorphic(ex_a: dict, ex_b: dict, budget: list | None = None) -> bool:
-    """Independent exact isomorphism check for two single variants: color
-    refinement for candidate pruning + backtracking bijection search. Does
-    NOT use structsig_r2._search or any canonical labeling. A step budget
-    (default 200k) raises _GIExceeded rather than running unbounded; callers
-    report CHECK_EXCEEDED honestly."""
+    """Independent exact isomorphism check. Decision procedure: MRV
+    backtracking over color-class-constrained candidate bijections with
+    incremental hyperedge-multiset consistency. WL color classes (a sound
+    isomorphism invariant) are used ONLY to constrain candidates and to
+    reject early on color-multiset mismatch; no canonical labeling, orbit
+    pruning, or serialization from structsig_r2 is consulted. Raises
+    _GIExceeded past a step budget."""
     fa, ra, qa, da, pa, ea = structsig_r2._extract(ex_a)
     fb, rb, qb, db, pb, eb = structsig_r2._extract(ex_b)
-    if da != db or len(fa) != len(fb) or len(ra) != len(rb):
+    if da != db or ex_a["surface"] != ex_b["surface"]:
         return False
-    ca = _iso_refine(structsig_r2._initial_colors(pa, ea, qa), fa, ra, qa)
-    cb = _iso_refine(structsig_r2._initial_colors(pb, eb, qb), fb, rb, qb)
-    if sorted(ca.values()) != sorted(cb.values()):
+    if len(fa) != len(fb) or len(ra) != len(rb):
         return False
-    # candidate lists by color
-    cand = {}
-    for node, col in ca.items():
-        cand.setdefault(col, []).append(node)
-    from collections import defaultdict
-    used = set()
-    sigma = {}
+    steps = [0]
+    BUDGET = budget[0] if budget else 1_000_000
 
-    facts_by_color = defaultdict(list)
-    for node, col in cb.items():
-        facts_by_color[col].append(node)
+    ca = structsig_r2._refine(structsig_r2._initial_colors(pa, ea, qa), fa, ra, qa,
+                              structsig_r2._precompute_incidence(fa, ra, qa, pa, ea))
+    cb = structsig_r2._refine(structsig_r2._initial_colors(pb, eb, qb), fb, rb, qb,
+                              structsig_r2._precompute_incidence(fb, rb, qb, pb, eb))
+    from collections import Counter, defaultdict
 
-    def lit_key(l, colors):
+    if Counter(ca.values()) != Counter(cb.values()):
+        return False
+    b_by_color = defaultdict(list)
+    for n, c in cb.items():
+        b_by_color[c].append(n)
+
+    # edge signatures under current (partial) sigma: literal color tuple
+    def lit_color(l, colors):
         return (l[0], colors[("P", l[1])], colors.get(("E", l[2]), "X"), l[2] == "x")
 
-    fa_keys = sorted(lit_key(f, ca) for f in fa)
-    fb_keys = sorted(lit_key(f, cb) for f in fb)
-    if fa_keys != fb_keys:
+    if sorted(lit_color(f, ca) for f in fa) != sorted(lit_color(f, cb) for f in fb):
         return False
-    ra_keys = sorted(
-        (sorted(lit_key(p, ca) for p in prem), lit_key(c, ca)) for prem, c in ra
-    )
-    rb_keys = sorted(
-        (sorted(lit_key(p, cb) for p in prem), lit_key(c, cb)) for prem, c in rb
-    )
-    if ra_keys != rb_keys:
+    if sorted(
+        (sorted(lit_color(p, ca) for p in prem), lit_color(c, ca)) for prem, c in ra
+    ) != sorted((sorted(lit_color(p, cb) for p in prem), lit_color(c, cb)) for prem, c in rb):
+        return False
+    if lit_color(qa, ca) != lit_color(qb, cb):
         return False
 
-    nodes = list(ca.keys())
-    if budget is None:
-        budget = [_GI_STEP_BUDGET]
+    sigma = {}
+    used = set()
+
+    def mapped_lit(l, complete_ok):
+        p = sigma.get(("P", l[1]))
+        if p is None:
+            return None
+        t = "x" if l[2] == "x" else sigma.get(("E", l[2]))
+        if t is None and l[2] != "x":
+            return None
+        return (l[0], p[1], t[1] if l[2] != "x" else "x")
 
     def consistent():
-        # partial structure check under current partial sigma
-        def m(l):
-            p = sigma.get(("P", l[1]))
-            e = sigma.get(("E", l[2])) if l[2] != "x" else "x"
-            return (l[0], p[1] if p else None, e[1] if isinstance(e, tuple) else e)
-        mapped_facts = sorted((m(f)[0], m(f)[1], m(f)[2]) for f in fa if m(f)[1] is not None and (f[2] == "x" or m(f)[2] is not None))
-        target = sorted((f[0], f[1], f[2]) for f in fb)
-        if len(mapped_facts) == len(fa) and mapped_facts != target:
+        steps[0] += 1
+        if steps[0] > BUDGET:
+            raise _GIExceeded("GI step budget exceeded (MRV)")
+        tgt_facts = Counter(fb)
+        mapped = Counter()
+        for f in fa:
+            m = mapped_lit(f, False)
+            if m is not None:
+                mapped[m] += 1
+        if mapped - tgt_facts:
             return False
-        # prefix-consistency for facts: each mapped prefix must be a sub-multiset
-        from collections import Counter
-        if not (Counter(mapped_facts) - Counter(target)) == Counter():
+        tgt_rules = Counter((tuple(sorted(prem)), concl) for prem, concl in rb)
+        mapped_r = Counter()
+        for prem, concl in ra:
+            ms = [mapped_lit(p, False) for p in prem]
+            mc = mapped_lit(concl, False)
+            if all(x is not None for x in ms) and mc is not None:
+                mapped_r[(tuple(sorted(ms)), mc)] += 1
+        if mapped_r - tgt_rules:
             return False
         return True
 
-    def backtrack(i):
-        budget[0] -= 1
-        if budget[0] < 0:
-            raise _GIExceeded("GI step budget exceeded")
-        if i == len(nodes):
-            # full verification
-            sigma_full = {n: facts_by_color[ca[n]][0] for n in []}
-            inv = {v: k for k, v in sigma.items()}
-            if len(inv) != len(sigma):
-                return False
-            def mapp(l):
-                p = sigma[("P", l[1])][1]
-                t = sigma[("E", l[2])][1] if l[2] != "x" else "x"
-                return (l[0], p, t)
-            if sorted(mapp(f) for f in fa) != sorted(fb):
-                return False
-            if sorted((sorted(mapp(p) for p in prem), mapp(c)) for prem, c in ra) != sorted(rb):
-                return False
-            if mapp(qa) != qb:
-                return False
-            return True
-        node = nodes[i]
-        for cand_node in facts_by_color[ca[node]]:
-            if cand_node in used:
+    nodes = list(ca.keys())
+    # MRV: dynamic ordering by smallest remaining candidate class
+    def order_nodes():
+        def cand_count(n):
+            return sum(1 for c in b_by_color[ca[n]] if c not in used)
+        return sorted(nodes, key=cand_count)
+
+    def backtrack():
+        remaining = [n for n in nodes if n not in sigma]
+        if not remaining:
+            mq = mapped_lit(qa, True)
+            return mq == qb and not (Counter(
+                mapped_lit(f, True) for f in fa
+            ) - Counter(fb)) and not (Counter(
+                (tuple(sorted(mapped_lit(p, True) for p in prem)), mapped_lit(c, True))
+                for prem, c in ra
+            ) - Counter((tuple(sorted(prem)), concl) for prem, concl in rb))
+        # MRV pick
+        best, best_c = None, 10**9
+        for n in remaining:
+            cnt = sum(1 for c in b_by_color[ca[n]] if c not in used)
+            if cnt < best_c:
+                best, best_c = n, cnt
+                if cnt <= 1:
+                    break
+        if best_c == 0:
+            return False
+        for cand in b_by_color[ca[best]]:
+            if cand in used:
                 continue
-            sigma[node] = cand_node
-            used.add(cand_node)
-            if consistent() and backtrack(i + 1):
+            sigma[best] = cand
+            used.add(cand)
+            if consistent() and backtrack():
                 return True
-            del sigma[node]
-            used.discard(cand_node)
+            del sigma[best]
+            used.discard(cand)
         return False
 
-    return backtrack(0)
+    return backtrack()
 
 
 # --------------------------------------------------------------------------
