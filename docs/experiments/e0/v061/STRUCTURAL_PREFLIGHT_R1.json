@@ -1,0 +1,671 @@
+{
+  "schema_id": "E0-V061-STRUCTURAL-PREFLIGHT-R1-v0",
+  "authority": "V06-STRUCTSIG-REMEDIATION-1; supersedes 74a80fd evidence (STRUCTURAL_PREFLIGHT_INVALID_FOR_SUPPORT_CONCLUSION)",
+  "bootstrap_only": true,
+  "model_scoring_performed": false,
+  "pilot_namespace": "ExpertForge-E0-v061-msel-preflight-r1",
+  "pilot_namespace_burned": true,
+  "authoritative_msel_materialization_performed": false,
+  "code_git_commit": "a67defe0202440607e3a5a957da052f5fe04c091",
+  "working_tree_clean_at_start": true,
+  "structsig_implementation": "structsig_r1: exact IR canonicalization, multiset incidence, full-length hashes, family = hash of sorted triple of canonical variant representations",
+  "support_measurement_is_descriptive_only": true,
+  "collision_observed_is_not_a_failure": true,
+  "discrimination_tests": {
+    "adversarial_multiplicity": {
+      "distinct": true,
+      "a_digest": "816fb8aa931f57c4",
+      "b_digest": "3c70e35c70d153ca"
+    },
+    "renaming_stability_all": true,
+    "order_permutation_stability_all": true,
+    "orbit_shared_member_tests": [
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      },
+      {
+        "shared_member_confirmed": true,
+        "orbit_overlap_size": 1,
+        "family_signatures_differ": true,
+        "mutation_applied": true
+      }
+    ],
+    "repeated_group_canonical_mismatches": 0
+  },
+  "per_cell": {
+    "ID|d1": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "ir_cap_failures": 0,
+      "ir_wall_excluded_count": 0,
+      "ir_wall_excluded_indices": [],
+      "verifier_errors": 0,
+      "unique_family_signatures": 1139,
+      "multiplicity_distribution": {
+        "3": 59,
+        "1": 810,
+        "6": 20,
+        "4": 43,
+        "10": 4,
+        "2": 147,
+        "5": 25,
+        "16": 1,
+        "7": 12,
+        "9": 5,
+        "8": 10,
+        "11": 1,
+        "12": 1,
+        "14": 1
+      },
+      "max_multiplicity": 16,
+      "frozen_prefix_stats": {
+        "n=250": {
+          "unique": 219,
+          "singletons": 196,
+          "doubletons": 17,
+          "chao1_richness_estimate": 1129.9,
+          "occupancy_fit_M": 923
+        },
+        "n=500": {
+          "unique": 409,
+          "singletons": 342,
+          "doubletons": 49,
+          "chao1_richness_estimate": 1193.5,
+          "occupancy_fit_M": 1201
+        },
+        "n=1000": {
+          "unique": 703,
+          "singletons": 549,
+          "doubletons": 76,
+          "chao1_richness_estimate": 1982.9,
+          "occupancy_fit_M": 1330
+        },
+        "n=2000": {
+          "unique": 1139,
+          "singletons": 810,
+          "doubletons": 147,
+          "chao1_richness_estimate": 2231.6,
+          "occupancy_fit_M": 1593
+        }
+      },
+      "estimator_notes": {
+        "chao1": "f1^2/(2*f2) on family-signature frequencies at the stated prefix",
+        "occupancy_fit_M": "bisect solve of u = M*(1-exp(-n/M)); assumes iid uniform draws from M equally likely signatures \u2014 descriptive only"
+      }
+    },
+    "ID|d2": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "ir_cap_failures": 0,
+      "ir_wall_excluded_count": 0,
+      "ir_wall_excluded_indices": [],
+      "verifier_errors": 0,
+      "unique_family_signatures": 1010,
+      "multiplicity_distribution": {
+        "3": 63,
+        "1": 673,
+        "2": 129,
+        "4": 47,
+        "6": 23,
+        "8": 13,
+        "13": 2,
+        "19": 1,
+        "7": 20,
+        "5": 29,
+        "12": 2,
+        "10": 3,
+        "9": 1,
+        "15": 2,
+        "11": 1,
+        "16": 1
+      },
+      "max_multiplicity": 19,
+      "frozen_prefix_stats": {
+        "n=250": {
+          "unique": 203,
+          "singletons": 166,
+          "doubletons": 30,
+          "chao1_richness_estimate": 459.3,
+          "occupancy_fit_M": 579
+        },
+        "n=500": {
+          "unique": 371,
+          "singletons": 279,
+          "doubletons": 67,
+          "chao1_richness_estimate": 580.9,
+          "occupancy_fit_M": 794
+        },
+        "n=1000": {
+          "unique": 625,
+          "singletons": 431,
+          "doubletons": 99,
+          "chao1_richness_estimate": 938.2,
+          "occupancy_fit_M": 974
+        },
+        "n=2000": {
+          "unique": 1010,
+          "singletons": 673,
+          "doubletons": 129,
+          "chao1_richness_estimate": 1755.5,
+          "occupancy_fit_M": 1276
+        }
+      },
+      "estimator_notes": {
+        "chao1": "f1^2/(2*f2) on family-signature frequencies at the stated prefix",
+        "occupancy_fit_M": "bisect solve of u = M*(1-exp(-n/M)); assumes iid uniform draws from M equally likely signatures \u2014 descriptive only"
+      }
+    },
+    "ID|d3": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "ir_cap_failures": 0,
+      "ir_wall_excluded_count": 0,
+      "ir_wall_excluded_indices": [],
+      "verifier_errors": 0,
+      "unique_family_signatures": 887,
+      "multiplicity_distribution": {
+        "1": 562,
+        "3": 68,
+        "4": 48,
+        "5": 31,
+        "10": 8,
+        "2": 106,
+        "17": 1,
+        "8": 12,
+        "9": 9,
+        "7": 14,
+        "12": 2,
+        "16": 2,
+        "6": 10,
+        "11": 5,
+        "14": 2,
+        "18": 1,
+        "13": 4,
+        "15": 1,
+        "19": 1
+      },
+      "max_multiplicity": 19,
+      "frozen_prefix_stats": {
+        "n=250": {
+          "unique": 205,
+          "singletons": 170,
+          "doubletons": 28,
+          "chao1_richness_estimate": 516.1,
+          "occupancy_fit_M": 608
+        },
+        "n=500": {
+          "unique": 358,
+          "singletons": 274,
+          "doubletons": 49,
+          "chao1_richness_estimate": 766.1,
+          "occupancy_fit_M": 704
+        },
+        "n=1000": {
+          "unique": 566,
+          "singletons": 376,
+          "doubletons": 79,
+          "chao1_richness_estimate": 894.8,
+          "occupancy_fit_M": 787
+        },
+        "n=2000": {
+          "unique": 887,
+          "singletons": 562,
+          "doubletons": 106,
+          "chao1_richness_estimate": 1489.8,
+          "occupancy_fit_M": 1038
+        }
+      },
+      "estimator_notes": {
+        "chao1": "f1^2/(2*f2) on family-signature frequencies at the stated prefix",
+        "occupancy_fit_M": "bisect solve of u = M*(1-exp(-n/M)); assumes iid uniform draws from M equally likely signatures \u2014 descriptive only"
+      }
+    },
+    "ID|d4": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "ir_cap_failures": 0,
+      "ir_wall_excluded_count": 0,
+      "ir_wall_excluded_indices": [],
+      "verifier_errors": 0,
+      "unique_family_signatures": 744,
+      "multiplicity_distribution": {
+        "12": 7,
+        "1": 452,
+        "3": 46,
+        "6": 24,
+        "4": 45,
+        "5": 31,
+        "13": 6,
+        "7": 21,
+        "8": 17,
+        "2": 66,
+        "10": 6,
+        "14": 4,
+        "11": 4,
+        "19": 2,
+        "9": 8,
+        "18": 2,
+        "17": 1,
+        "16": 1,
+        "15": 1
+      },
+      "max_multiplicity": 19,
+      "frozen_prefix_stats": {
+        "n=250": {
+          "unique": 188,
+          "singletons": 144,
+          "doubletons": 30,
+          "chao1_richness_estimate": 345.6,
+          "occupancy_fit_M": 417
+        },
+        "n=500": {
+          "unique": 318,
+          "singletons": 212,
+          "doubletons": 61,
+          "chao1_richness_estimate": 368.4,
+          "occupancy_fit_M": 507
+        },
+        "n=1000": {
+          "unique": 479,
+          "singletons": 287,
+          "doubletons": 74,
+          "chao1_richness_estimate": 556.5,
+          "occupancy_fit_M": 585
+        },
+        "n=2000": {
+          "unique": 744,
+          "singletons": 452,
+          "doubletons": 66,
+          "chao1_richness_estimate": 1547.8,
+          "occupancy_fit_M": 814
+        }
+      },
+      "estimator_notes": {
+        "chao1": "f1^2/(2*f2) on family-signature frequencies at the stated prefix",
+        "occupancy_fit_M": "bisect solve of u = M*(1-exp(-n/M)); assumes iid uniform draws from M equally likely signatures \u2014 descriptive only"
+      }
+    },
+    "STRUCT|d1": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "ir_cap_failures": 0,
+      "ir_wall_excluded_count": 0,
+      "ir_wall_excluded_indices": [],
+      "verifier_errors": 0,
+      "unique_family_signatures": 1395,
+      "multiplicity_distribution": {
+        "1": 1138,
+        "8": 7,
+        "2": 112,
+        "4": 36,
+        "3": 61,
+        "5": 19,
+        "7": 7,
+        "6": 11,
+        "9": 3,
+        "18": 1
+      },
+      "max_multiplicity": 18,
+      "frozen_prefix_stats": {
+        "n=250": {
+          "unique": 227,
+          "singletons": 208,
+          "doubletons": 16,
+          "chao1_richness_estimate": 1352.0,
+          "occupancy_fit_M": 1274
+        },
+        "n=500": {
+          "unique": 431,
+          "singletons": 382,
+          "doubletons": 35,
+          "chao1_richness_estimate": 2084.6,
+          "occupancy_fit_M": 1641
+        },
+        "n=1000": {
+          "unique": 785,
+          "singletons": 650,
+          "doubletons": 87,
+          "chao1_richness_estimate": 2428.2,
+          "occupancy_fit_M": 1979
+        },
+        "n=2000": {
+          "unique": 1395,
+          "singletons": 1138,
+          "doubletons": 112,
+          "chao1_richness_estimate": 5781.4,
+          "occupancy_fit_M": 2599
+        }
+      },
+      "estimator_notes": {
+        "chao1": "f1^2/(2*f2) on family-signature frequencies at the stated prefix",
+        "occupancy_fit_M": "bisect solve of u = M*(1-exp(-n/M)); assumes iid uniform draws from M equally likely signatures \u2014 descriptive only"
+      }
+    },
+    "STRUCT|d2": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "ir_cap_failures": 0,
+      "ir_wall_excluded_count": 0,
+      "ir_wall_excluded_indices": [],
+      "verifier_errors": 0,
+      "unique_family_signatures": 1152,
+      "multiplicity_distribution": {
+        "1": 860,
+        "3": 58,
+        "2": 119,
+        "8": 7,
+        "4": 36,
+        "5": 25,
+        "10": 9,
+        "9": 8,
+        "13": 3,
+        "6": 10,
+        "7": 12,
+        "12": 3,
+        "11": 2
+      },
+      "max_multiplicity": 13,
+      "frozen_prefix_stats": {
+        "n=250": {
+          "unique": 217,
+          "singletons": 190,
+          "doubletons": 21,
+          "chao1_richness_estimate": 859.5,
+          "occupancy_fit_M": 862
+        },
+        "n=500": {
+          "unique": 388,
+          "singletons": 318,
+          "doubletons": 43,
+          "chao1_richness_estimate": 1175.9,
+          "occupancy_fit_M": 942
+        },
+        "n=1000": {
+          "unique": 671,
+          "singletons": 518,
+          "doubletons": 73,
+          "chao1_richness_estimate": 1837.8,
+          "occupancy_fit_M": 1164
+        },
+        "n=2000": {
+          "unique": 1152,
+          "singletons": 860,
+          "doubletons": 119,
+          "chao1_richness_estimate": 3107.6,
+          "occupancy_fit_M": 1630
+        }
+      },
+      "estimator_notes": {
+        "chao1": "f1^2/(2*f2) on family-signature frequencies at the stated prefix",
+        "occupancy_fit_M": "bisect solve of u = M*(1-exp(-n/M)); assumes iid uniform draws from M equally likely signatures \u2014 descriptive only"
+      }
+    },
+    "STRUCT|d3": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "ir_cap_failures": 0,
+      "ir_wall_excluded_count": 0,
+      "ir_wall_excluded_indices": [],
+      "verifier_errors": 0,
+      "unique_family_signatures": 1033,
+      "multiplicity_distribution": {
+        "1": 748,
+        "10": 5,
+        "9": 13,
+        "5": 27,
+        "3": 53,
+        "4": 34,
+        "2": 100,
+        "6": 17,
+        "12": 4,
+        "13": 3,
+        "16": 3,
+        "8": 10,
+        "7": 11,
+        "14": 2,
+        "11": 3
+      },
+      "max_multiplicity": 16,
+      "frozen_prefix_stats": {
+        "n=250": {
+          "unique": 211,
+          "singletons": 179,
+          "doubletons": 25,
+          "chao1_richness_estimate": 640.8,
+          "occupancy_fit_M": 716
+        },
+        "n=500": {
+          "unique": 375,
+          "singletons": 301,
+          "doubletons": 45,
+          "chao1_richness_estimate": 1006.7,
+          "occupancy_fit_M": 825
+        },
+        "n=1000": {
+          "unique": 625,
+          "singletons": 460,
+          "doubletons": 76,
+          "chao1_richness_estimate": 1392.1,
+          "occupancy_fit_M": 974
+        },
+        "n=2000": {
+          "unique": 1033,
+          "singletons": 748,
+          "doubletons": 100,
+          "chao1_richness_estimate": 2797.5,
+          "occupancy_fit_M": 1327
+        }
+      },
+      "estimator_notes": {
+        "chao1": "f1^2/(2*f2) on family-signature frequencies at the stated prefix",
+        "occupancy_fit_M": "bisect solve of u = M*(1-exp(-n/M)); assumes iid uniform draws from M equally likely signatures \u2014 descriptive only"
+      }
+    },
+    "STRUCT|d4": {
+      "attempted": 2000,
+      "accepted_complete": 2000,
+      "ir_cap_failures": 0,
+      "ir_wall_excluded_count": 0,
+      "ir_wall_excluded_indices": [],
+      "verifier_errors": 0,
+      "unique_family_signatures": 802,
+      "multiplicity_distribution": {
+        "2": 69,
+        "1": 530,
+        "5": 27,
+        "9": 11,
+        "18": 1,
+        "4": 45,
+        "23": 3,
+        "6": 15,
+        "8": 16,
+        "7": 19,
+        "3": 39,
+        "15": 4,
+        "17": 2,
+        "10": 4,
+        "13": 3,
+        "20": 3,
+        "11": 8,
+        "12": 1,
+        "16": 1,
+        "14": 1
+      },
+      "max_multiplicity": 23,
+      "frozen_prefix_stats": {
+        "n=250": {
+          "unique": 190,
+          "singletons": 154,
+          "doubletons": 22,
+          "chao1_richness_estimate": 539.0,
+          "occupancy_fit_M": 434
+        },
+        "n=500": {
+          "unique": 318,
+          "singletons": 225,
+          "doubletons": 47,
+          "chao1_richness_estimate": 538.6,
+          "occupancy_fit_M": 507
+        },
+        "n=1000": {
+          "unique": 509,
+          "singletons": 325,
+          "doubletons": 74,
+          "chao1_richness_estimate": 713.7,
+          "occupancy_fit_M": 647
+        },
+        "n=2000": {
+          "unique": 802,
+          "singletons": 530,
+          "doubletons": 69,
+          "chao1_richness_estimate": 2035.5,
+          "occupancy_fit_M": 899
+        }
+      },
+      "estimator_notes": {
+        "chao1": "f1^2/(2*f2) on family-signature frequencies at the stated prefix",
+        "occupancy_fit_M": "bisect solve of u = M*(1-exp(-n/M)); assumes iid uniform draws from M equally likely signatures \u2014 descriptive only"
+      }
+    }
+  },
+  "determinism_mismatches": 0,
+  "cross_cell_ambiguity_count": 0,
+  "failures": [],
+  "status": "PASS",
+  "wall_seconds": 4227.3
+}
