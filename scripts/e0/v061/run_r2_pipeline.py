@@ -17,8 +17,9 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-PY = HERE.parent.parent / ".venv" / "Scripts" / "python.exe"
-EVIDENCE = HERE.parent.parent.parent / "docs" / "experiments" / "e0" / "v061"
+REPO_ROOT = HERE.parent.parent.parent  # v061 -> e0 -> scripts -> repo root
+PY = REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+EVIDENCE = REPO_ROOT / "docs" / "experiments" / "e0" / "v061"
 
 
 def run(mode: str, extra: list[str]) -> dict:
