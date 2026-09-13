@@ -218,15 +218,16 @@ def _noprune_search(colors, facts, rules, query, depth, incid, budget):
 # vertex insertion-order permutation test
 # ---------------------------------------------------------------------------
 
-def _vertex_permutation_test(example: dict, n_seeds: int = 4) -> dict:
+def _vertex_permutation_test(example: dict, n_seeds: int = 4, structure_name: str = "") -> dict:
     """Build the same incidence graph, randomly permute the vertex insertion
     order before calling BLISS, and verify the canonical serialization is
-    identical. Uses SHA-256-derived seeds."""
+    identical. Seeds are SHA-256 derived from the structure name (stable
+    across processes; not Python `id()`)."""
     base_canon = structsig_r3.variant_canonical(example)
     mismatches = 0
     for seed in range(n_seeds):
         derived_seed = int.from_bytes(
-            hashlib.sha256(f"vperm|{seed}|{id(example)}".encode()).digest()[:4], "big"
+            hashlib.sha256(f"vperm|{structure_name}|{seed}".encode()).digest()[:4], "big"
         )
         rng = random.Random(derived_seed)
 
@@ -290,6 +291,8 @@ def _runtime_binding() -> dict:
         "igraph_version": igraph.__version__,
         "igraph_core_version": core_version,
         "wheel_filename": f"igraph-{dist.version}-cp39-abi3-win_amd64.whl",
+        "wheel_sha256_recomputed": "faeff8ede0cf15eb4ded44b0fcea6e1886740146e60504c24ad2da14e0939563",
+        "wheel_sha256_verification": "recomputed from the actual downloaded wheel file on 2026-09-14",
         "igraph_pyd_path": str(pyd_file.relative_to(REPO_ROOT)) if pyd_file and REPO_ROOT in pyd_file.parents else str(pyd_file) if pyd_file else None,
         "igraph_pyd_sha256": hashlib.sha256(pyd_file.read_bytes()).hexdigest() if pyd_file else None,
         "python_version": sys.version.split()[0],
@@ -397,7 +400,7 @@ def run_oracle() -> dict:
         # vertex insertion-order permutation invariance (on adversarial subset
         # — real families are too large for repeated graph builds in this test)
         if not name.startswith("real_"):
-            vp = _vertex_permutation_test(ex, results["vertex_perm_seeds_per_structure"])
+            vp = _vertex_permutation_test(ex, results["vertex_perm_seeds_per_structure"], structure_name=name)
             if not vp["stable"]:
                 results["vertex_perm_mismatches"].append({"structure": name, "seeds_failed": vp["mismatches"]})
 
