@@ -1,0 +1,590 @@
+{
+  "schema_id": "E0-V061-DEPLETION-EXACT-R3-v0",
+  "authority": "V06-MSEL-SURFACE-BINDING-1 (contract-exact replay after CONSERVATIVE_STRESS_FAIL classification of DEPLETION_R3)",
+  "surface_binding": "train_pool = ID surface only (authority SPEC-BOUND ruling)",
+  "horizon_factor": 20,
+  "namespaces": {
+    "msel": "ExpertForge-E0-v061-msel-deplex-burn",
+    "qualification": "ExpertForge-E0-v061-qual-deplex-burn",
+    "all_burned": true
+  },
+  "depths": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "msel_burn": {
+    "train_pool|d1": {
+      "families": 32000,
+      "surface": "ID",
+      "unique_signatures": 8606,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1915
+        },
+        {
+          "n": 8000,
+          "unique": 3114
+        },
+        {
+          "n": 12000,
+          "unique": 4180
+        },
+        {
+          "n": 16000,
+          "unique": 5174
+        },
+        {
+          "n": 20000,
+          "unique": 6072
+        },
+        {
+          "n": 24000,
+          "unique": 6907
+        },
+        {
+          "n": 28000,
+          "unique": 7774
+        },
+        {
+          "n": 32000,
+          "unique": 8606
+        }
+      ]
+    },
+    "dev_ID|d1": {
+      "families": 500,
+      "surface": "ID",
+      "unique_signatures": 408
+    },
+    "eval_ID|d1": {
+      "families": 500,
+      "surface": "ID",
+      "unique_signatures": 401
+    },
+    "eval_STRUCT|d1": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 589,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 0,
+      "duplicate_rejected": 89,
+      "acceptance_rate": 0.8489,
+      "acceptance_curve": []
+    },
+    "total|d1": {
+      "total_unique_burned": 9293,
+      "depth_seconds": 62.7
+    },
+    "train_pool|d2": {
+      "families": 32000,
+      "surface": "ID",
+      "unique_signatures": 7270,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1661
+        },
+        {
+          "n": 8000,
+          "unique": 2716
+        },
+        {
+          "n": 12000,
+          "unique": 3567
+        },
+        {
+          "n": 16000,
+          "unique": 4389
+        },
+        {
+          "n": 20000,
+          "unique": 5175
+        },
+        {
+          "n": 24000,
+          "unique": 5907
+        },
+        {
+          "n": 28000,
+          "unique": 6603
+        },
+        {
+          "n": 32000,
+          "unique": 7270
+        }
+      ]
+    },
+    "dev_ID|d2": {
+      "families": 500,
+      "surface": "ID",
+      "unique_signatures": 373
+    },
+    "eval_ID|d2": {
+      "families": 500,
+      "surface": "ID",
+      "unique_signatures": 358
+    },
+    "eval_STRUCT|d2": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 640,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 0,
+      "duplicate_rejected": 140,
+      "acceptance_rate": 0.7812,
+      "acceptance_curve": []
+    },
+    "total|d2": {
+      "total_unique_burned": 7899,
+      "depth_seconds": 70.8
+    },
+    "train_pool|d3": {
+      "families": 32000,
+      "surface": "ID",
+      "unique_signatures": 5735,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1400
+        },
+        {
+          "n": 8000,
+          "unique": 2203
+        },
+        {
+          "n": 12000,
+          "unique": 2925
+        },
+        {
+          "n": 16000,
+          "unique": 3569
+        },
+        {
+          "n": 20000,
+          "unique": 4155
+        },
+        {
+          "n": 24000,
+          "unique": 4729
+        },
+        {
+          "n": 28000,
+          "unique": 5234
+        },
+        {
+          "n": 32000,
+          "unique": 5735
+        }
+      ]
+    },
+    "dev_ID|d3": {
+      "families": 500,
+      "surface": "ID",
+      "unique_signatures": 344
+    },
+    "eval_ID|d3": {
+      "families": 500,
+      "surface": "ID",
+      "unique_signatures": 359
+    },
+    "eval_STRUCT|d3": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 700,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 0,
+      "duplicate_rejected": 200,
+      "acceptance_rate": 0.7143,
+      "acceptance_curve": []
+    },
+    "total|d3": {
+      "total_unique_burned": 6346,
+      "depth_seconds": 86.3
+    },
+    "train_pool|d4": {
+      "families": 32000,
+      "surface": "ID",
+      "unique_signatures": 4496,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1157
+        },
+        {
+          "n": 8000,
+          "unique": 1793
+        },
+        {
+          "n": 12000,
+          "unique": 2358
+        },
+        {
+          "n": 16000,
+          "unique": 2837
+        },
+        {
+          "n": 20000,
+          "unique": 3273
+        },
+        {
+          "n": 24000,
+          "unique": 3701
+        },
+        {
+          "n": 28000,
+          "unique": 4088
+        },
+        {
+          "n": 32000,
+          "unique": 4496
+        }
+      ]
+    },
+    "dev_ID|d4": {
+      "families": 500,
+      "surface": "ID",
+      "unique_signatures": 307
+    },
+    "eval_ID|d4": {
+      "families": 500,
+      "surface": "ID",
+      "unique_signatures": 309
+    },
+    "eval_STRUCT|d4": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 988,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 0,
+      "duplicate_rejected": 488,
+      "acceptance_rate": 0.5061,
+      "acceptance_curve": []
+    },
+    "total|d4": {
+      "total_unique_burned": 5101,
+      "depth_seconds": 79.2
+    }
+  },
+  "fresh_qualification": {
+    "qual_train_ID|d1": {
+      "demand": 2000,
+      "horizon": 40000,
+      "attempts": 10570,
+      "accepted": 2000,
+      "filled": true,
+      "msel_burn_rejected": 8468,
+      "duplicate_rejected": 102,
+      "acceptance_rate": 0.1892,
+      "acceptance_curve": [
+        {
+          "attempted": 4000,
+          "accepted": 773
+        },
+        {
+          "attempted": 8000,
+          "accepted": 1545
+        }
+      ]
+    },
+    "qual_eval_ID|d1": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 2945,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 2444,
+      "duplicate_rejected": 1,
+      "acceptance_rate": 0.1698,
+      "acceptance_curve": [
+        {
+          "attempted": 1000,
+          "accepted": 161
+        },
+        {
+          "attempted": 2000,
+          "accepted": 334
+        }
+      ]
+    },
+    "qual_eval_STRUCT|d1": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 735,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 187,
+      "duplicate_rejected": 48,
+      "acceptance_rate": 0.6803,
+      "acceptance_curve": []
+    },
+    "qual_train_ID|d2": {
+      "demand": 2000,
+      "horizon": 40000,
+      "attempts": 13409,
+      "accepted": 2000,
+      "filled": true,
+      "msel_burn_rejected": 11261,
+      "duplicate_rejected": 148,
+      "acceptance_rate": 0.1492,
+      "acceptance_curve": [
+        {
+          "attempted": 4000,
+          "accepted": 641
+        },
+        {
+          "attempted": 8000,
+          "accepted": 1218
+        },
+        {
+          "attempted": 12000,
+          "accepted": 1805
+        }
+      ]
+    },
+    "qual_eval_ID|d2": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 3492,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 2986,
+      "duplicate_rejected": 6,
+      "acceptance_rate": 0.1432,
+      "acceptance_curve": [
+        {
+          "attempted": 1000,
+          "accepted": 151
+        },
+        {
+          "attempted": 2000,
+          "accepted": 286
+        },
+        {
+          "attempted": 3000,
+          "accepted": 426
+        }
+      ]
+    },
+    "qual_eval_STRUCT|d2": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 903,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 316,
+      "duplicate_rejected": 87,
+      "acceptance_rate": 0.5537,
+      "acceptance_curve": []
+    },
+    "qual_train_ID|d3": {
+      "demand": 2000,
+      "horizon": 40000,
+      "attempts": 17320,
+      "accepted": 2000,
+      "filled": true,
+      "msel_burn_rejected": 15119,
+      "duplicate_rejected": 201,
+      "acceptance_rate": 0.1155,
+      "acceptance_curve": [
+        {
+          "attempted": 4000,
+          "accepted": 474
+        },
+        {
+          "attempted": 8000,
+          "accepted": 939
+        },
+        {
+          "attempted": 12000,
+          "accepted": 1380
+        },
+        {
+          "attempted": 16000,
+          "accepted": 1862
+        }
+      ]
+    },
+    "qual_eval_ID|d3": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 5027,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 4517,
+      "duplicate_rejected": 10,
+      "acceptance_rate": 0.0995,
+      "acceptance_curve": [
+        {
+          "attempted": 1000,
+          "accepted": 98
+        },
+        {
+          "attempted": 2000,
+          "accepted": 191
+        },
+        {
+          "attempted": 3000,
+          "accepted": 278
+        },
+        {
+          "attempted": 4000,
+          "accepted": 385
+        },
+        {
+          "attempted": 5000,
+          "accepted": 495
+        }
+      ]
+    },
+    "qual_eval_STRUCT|d3": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 1252,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 636,
+      "duplicate_rejected": 116,
+      "acceptance_rate": 0.3994,
+      "acceptance_curve": [
+        {
+          "attempted": 1000,
+          "accepted": 401
+        }
+      ]
+    },
+    "qual_train_ID|d4": {
+      "demand": 2000,
+      "horizon": 40000,
+      "attempts": 24447,
+      "accepted": 2000,
+      "filled": true,
+      "msel_burn_rejected": 22133,
+      "duplicate_rejected": 314,
+      "acceptance_rate": 0.0818,
+      "acceptance_curve": [
+        {
+          "attempted": 4000,
+          "accepted": 335
+        },
+        {
+          "attempted": 8000,
+          "accepted": 680
+        },
+        {
+          "attempted": 12000,
+          "accepted": 1012
+        },
+        {
+          "attempted": 16000,
+          "accepted": 1368
+        },
+        {
+          "attempted": 20000,
+          "accepted": 1674
+        },
+        {
+          "attempted": 24000,
+          "accepted": 1968
+        }
+      ]
+    },
+    "qual_eval_ID|d4": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 7402,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 6883,
+      "duplicate_rejected": 19,
+      "acceptance_rate": 0.0675,
+      "acceptance_curve": [
+        {
+          "attempted": 1000,
+          "accepted": 65
+        },
+        {
+          "attempted": 2000,
+          "accepted": 140
+        },
+        {
+          "attempted": 3000,
+          "accepted": 211
+        },
+        {
+          "attempted": 4000,
+          "accepted": 281
+        },
+        {
+          "attempted": 5000,
+          "accepted": 354
+        },
+        {
+          "attempted": 6000,
+          "accepted": 413
+        },
+        {
+          "attempted": 7000,
+          "accepted": 477
+        }
+      ]
+    },
+    "qual_eval_STRUCT|d4": {
+      "demand": 500,
+      "horizon": 10000,
+      "attempts": 1979,
+      "accepted": 500,
+      "filled": true,
+      "msel_burn_rejected": 1334,
+      "duplicate_rejected": 145,
+      "acceptance_rate": 0.2527,
+      "acceptance_curve": [
+        {
+          "attempted": 1000,
+          "accepted": 271
+        }
+      ]
+    }
+  },
+  "code_git_commit": "9e52d7b404ef0e2b24c81d9197040bfc9e18ac24",
+  "working_tree_clean_at_start": true,
+  "fill_summary": {
+    "msel_eval_STRUCT|d1": true,
+    "msel_train_pool|d1": true,
+    "msel_dev_ID|d1": true,
+    "msel_eval_ID|d1": true,
+    "qual_train_ID|d1": true,
+    "qual_eval_ID|d1": true,
+    "qual_eval_STRUCT|d1": true,
+    "msel_eval_STRUCT|d2": true,
+    "msel_train_pool|d2": true,
+    "msel_dev_ID|d2": true,
+    "msel_eval_ID|d2": true,
+    "qual_train_ID|d2": true,
+    "qual_eval_ID|d2": true,
+    "qual_eval_STRUCT|d2": true,
+    "msel_eval_STRUCT|d3": true,
+    "msel_train_pool|d3": true,
+    "msel_dev_ID|d3": true,
+    "msel_eval_ID|d3": true,
+    "qual_train_ID|d3": true,
+    "qual_eval_ID|d3": true,
+    "qual_eval_STRUCT|d3": true,
+    "msel_eval_STRUCT|d4": true,
+    "msel_train_pool|d4": true,
+    "msel_dev_ID|d4": true,
+    "msel_eval_ID|d4": true,
+    "qual_train_ID|d4": true,
+    "qual_eval_ID|d4": true,
+    "qual_eval_STRUCT|d4": true
+  },
+  "all_splits_filled": true,
+  "s4_4_verdict": "SUFFICIENT",
+  "wall_seconds": 715.6
+}
