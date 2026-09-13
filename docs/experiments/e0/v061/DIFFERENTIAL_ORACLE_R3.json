@@ -14,6 +14,8 @@
     "igraph_version": "1.0.0",
     "igraph_core_version": "1.0.0",
     "wheel_filename": "igraph-1.0.0-cp39-abi3-win_amd64.whl",
+    "wheel_sha256_recomputed": "faeff8ede0cf15eb4ded44b0fcea6e1886740146e60504c24ad2da14e0939563",
+    "wheel_sha256_verification": "recomputed from the actual downloaded wheel file on 2026-09-14",
     "igraph_pyd_path": ".venv\\Lib\\site-packages\\igraph\\_igraph.pyd",
     "igraph_pyd_sha256": "92d9e9e773313320417c0e9193d04f3e94b948833b4e6c34e46c7f53d122441f",
     "python_version": "3.12.10",
@@ -51,5 +53,5 @@
   },
   "status": "PASS",
   "wall_seconds": 1.6,
-  "code_git_commit": "fc8f1920e6652b9e9172fc6f39b424a91a01ab6a"
+  "code_git_commit": "6af2cf27d186b224b8364c345496b7f1b20c7c2d"
 }
