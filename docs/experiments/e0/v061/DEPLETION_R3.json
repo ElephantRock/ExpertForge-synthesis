@@ -1,0 +1,462 @@
+{
+  "depths": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "msel_burn": {
+    "train_ID|d1": {
+      "families": 32000,
+      "unique_signatures": 8671,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1908
+        },
+        {
+          "n": 8000,
+          "unique": 3127
+        },
+        {
+          "n": 12000,
+          "unique": 4195
+        },
+        {
+          "n": 16000,
+          "unique": 5160
+        },
+        {
+          "n": 20000,
+          "unique": 6130
+        },
+        {
+          "n": 24000,
+          "unique": 6997
+        },
+        {
+          "n": 28000,
+          "unique": 7843
+        },
+        {
+          "n": 32000,
+          "unique": 8671
+        }
+      ]
+    },
+    "train_STRUCT|d1": {
+      "families": 32000,
+      "unique_signatures": 12974,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 2436
+        },
+        {
+          "n": 8000,
+          "unique": 4227
+        },
+        {
+          "n": 12000,
+          "unique": 5840
+        },
+        {
+          "n": 16000,
+          "unique": 7450
+        },
+        {
+          "n": 20000,
+          "unique": 8867
+        },
+        {
+          "n": 24000,
+          "unique": 10280
+        },
+        {
+          "n": 28000,
+          "unique": 11655
+        },
+        {
+          "n": 32000,
+          "unique": 12974
+        }
+      ]
+    },
+    "dev_ID|d1": {
+      "families": 500,
+      "unique_signatures": 398
+    },
+    "eval_ID|d1": {
+      "families": 500,
+      "unique_signatures": 393
+    },
+    "eval_STRUCT_selection|d1": {
+      "demand": 500,
+      "accepted_disjoint": 500,
+      "rejected_burned_signature": 991,
+      "attempts": 1491,
+      "rejection_rate": 0.6647,
+      "exhausted_pool": false
+    },
+    "total_burn|d1": {
+      "total_unique_signatures": 22319,
+      "depth_minutes": 2.0
+    },
+    "train_ID|d2": {
+      "families": 32000,
+      "unique_signatures": 7147,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1673
+        },
+        {
+          "n": 8000,
+          "unique": 2690
+        },
+        {
+          "n": 12000,
+          "unique": 3580
+        },
+        {
+          "n": 16000,
+          "unique": 4388
+        },
+        {
+          "n": 20000,
+          "unique": 5171
+        },
+        {
+          "n": 24000,
+          "unique": 5888
+        },
+        {
+          "n": 28000,
+          "unique": 6509
+        },
+        {
+          "n": 32000,
+          "unique": 7147
+        }
+      ]
+    },
+    "train_STRUCT|d2": {
+      "families": 32000,
+      "unique_signatures": 10391,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 2072
+        },
+        {
+          "n": 8000,
+          "unique": 3498
+        },
+        {
+          "n": 12000,
+          "unique": 4875
+        },
+        {
+          "n": 16000,
+          "unique": 6065
+        },
+        {
+          "n": 20000,
+          "unique": 7234
+        },
+        {
+          "n": 24000,
+          "unique": 8309
+        },
+        {
+          "n": 28000,
+          "unique": 9352
+        },
+        {
+          "n": 32000,
+          "unique": 10391
+        }
+      ]
+    },
+    "dev_ID|d2": {
+      "families": 500,
+      "unique_signatures": 380
+    },
+    "eval_ID|d2": {
+      "families": 500,
+      "unique_signatures": 370
+    },
+    "eval_STRUCT_selection|d2": {
+      "demand": 500,
+      "accepted_disjoint": 482,
+      "rejected_burned_signature": 1518,
+      "attempts": 2000,
+      "rejection_rate": 0.759,
+      "exhausted_pool": true
+    },
+    "total_burn|d2": {
+      "total_unique_signatures": 18187,
+      "depth_minutes": 2.3
+    },
+    "train_ID|d3": {
+      "families": 32000,
+      "unique_signatures": 5825,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1383
+        },
+        {
+          "n": 8000,
+          "unique": 2223
+        },
+        {
+          "n": 12000,
+          "unique": 2965
+        },
+        {
+          "n": 16000,
+          "unique": 3598
+        },
+        {
+          "n": 20000,
+          "unique": 4205
+        },
+        {
+          "n": 24000,
+          "unique": 4751
+        },
+        {
+          "n": 28000,
+          "unique": 5300
+        },
+        {
+          "n": 32000,
+          "unique": 5825
+        }
+      ]
+    },
+    "train_STRUCT|d3": {
+      "families": 32000,
+      "unique_signatures": 7892,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1657
+        },
+        {
+          "n": 8000,
+          "unique": 2774
+        },
+        {
+          "n": 12000,
+          "unique": 3773
+        },
+        {
+          "n": 16000,
+          "unique": 4732
+        },
+        {
+          "n": 20000,
+          "unique": 5603
+        },
+        {
+          "n": 24000,
+          "unique": 6411
+        },
+        {
+          "n": 28000,
+          "unique": 7159
+        },
+        {
+          "n": 32000,
+          "unique": 7892
+        }
+      ]
+    },
+    "dev_ID|d3": {
+      "families": 500,
+      "unique_signatures": 345
+    },
+    "eval_ID|d3": {
+      "families": 500,
+      "unique_signatures": 338
+    },
+    "eval_STRUCT_selection|d3": {
+      "demand": 500,
+      "accepted_disjoint": 379,
+      "rejected_burned_signature": 1621,
+      "attempts": 2000,
+      "rejection_rate": 0.8105,
+      "exhausted_pool": true
+    },
+    "total_burn|d3": {
+      "total_unique_signatures": 14197,
+      "depth_minutes": 2.1
+    },
+    "train_ID|d4": {
+      "families": 32000,
+      "unique_signatures": 4476,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1155
+        },
+        {
+          "n": 8000,
+          "unique": 1755
+        },
+        {
+          "n": 12000,
+          "unique": 2299
+        },
+        {
+          "n": 16000,
+          "unique": 2772
+        },
+        {
+          "n": 20000,
+          "unique": 3240
+        },
+        {
+          "n": 24000,
+          "unique": 3679
+        },
+        {
+          "n": 28000,
+          "unique": 4098
+        },
+        {
+          "n": 32000,
+          "unique": 4476
+        }
+      ]
+    },
+    "train_STRUCT|d4": {
+      "families": 32000,
+      "unique_signatures": 5640,
+      "discovery_curve": [
+        {
+          "n": 4000,
+          "unique": 1253
+        },
+        {
+          "n": 8000,
+          "unique": 2047
+        },
+        {
+          "n": 12000,
+          "unique": 2716
+        },
+        {
+          "n": 16000,
+          "unique": 3384
+        },
+        {
+          "n": 20000,
+          "unique": 3993
+        },
+        {
+          "n": 24000,
+          "unique": 4629
+        },
+        {
+          "n": 28000,
+          "unique": 5166
+        },
+        {
+          "n": 32000,
+          "unique": 5640
+        }
+      ]
+    },
+    "dev_ID|d4": {
+      "families": 500,
+      "unique_signatures": 328
+    },
+    "eval_ID|d4": {
+      "families": 500,
+      "unique_signatures": 322
+    },
+    "eval_STRUCT_selection|d4": {
+      "demand": 500,
+      "accepted_disjoint": 238,
+      "rejected_burned_signature": 1762,
+      "attempts": 2000,
+      "rejection_rate": 0.881,
+      "exhausted_pool": true
+    },
+    "total_burn|d4": {
+      "total_unique_signatures": 10453,
+      "depth_minutes": 2.2
+    }
+  },
+  "fresh_qualification": {
+    "ID|d1": {
+      "demand": 2000,
+      "accepted_disjoint": 1171,
+      "rejected_burned": 4829,
+      "acceptance_rate": 0.1952,
+      "exhausted_pool": true
+    },
+    "STRUCT|d1": {
+      "demand": 2000,
+      "accepted_disjoint": 1947,
+      "rejected_burned": 4053,
+      "acceptance_rate": 0.3245,
+      "exhausted_pool": true
+    },
+    "ID|d2": {
+      "demand": 2000,
+      "accepted_disjoint": 941,
+      "rejected_burned": 5059,
+      "acceptance_rate": 0.1568,
+      "exhausted_pool": true
+    },
+    "STRUCT|d2": {
+      "demand": 2000,
+      "accepted_disjoint": 1503,
+      "rejected_burned": 4497,
+      "acceptance_rate": 0.2505,
+      "exhausted_pool": true
+    },
+    "ID|d3": {
+      "demand": 2000,
+      "accepted_disjoint": 722,
+      "rejected_burned": 5278,
+      "acceptance_rate": 0.1203,
+      "exhausted_pool": true
+    },
+    "STRUCT|d3": {
+      "demand": 2000,
+      "accepted_disjoint": 1026,
+      "rejected_burned": 4974,
+      "acceptance_rate": 0.171,
+      "exhausted_pool": true
+    },
+    "ID|d4": {
+      "demand": 2000,
+      "accepted_disjoint": 591,
+      "rejected_burned": 5409,
+      "acceptance_rate": 0.0985,
+      "exhausted_pool": true
+    },
+    "STRUCT|d4": {
+      "demand": 2000,
+      "accepted_disjoint": 748,
+      "rejected_burned": 5252,
+      "acceptance_rate": 0.1247,
+      "exhausted_pool": true
+    }
+  },
+  "assumptions": [
+    "train_pool simulated at 32,000 families/depth on both ID and STRUCT surfaces (SS4.1 does not split the pool by surface; both are generated to bound the burn)",
+    "dev_ID and eval_ID at 500 families/depth each (ID surface)",
+    "eval_STRUCT at 500 families/depth selected StructSig-disjoint from all other MSEL splits",
+    "fresh-namespace demand set at 2,000 families/depth (v0.5 qualification-scale) on both surfaces",
+    "all MSEL signature hashes are burned from any later corpus (SS13), not merely eval_STRUCT"
+  ],
+  "status": "COMPLETED",
+  "wall_seconds": 607.0,
+  "code_git_commit": "2fca597af360ea486d54c01ae29af983f9a3c095"
+}
