@@ -1,0 +1,23 @@
+{
+  "structures_tested": 266,
+  "renamings_per_structure": 8,
+  "permutations_per_structure": 4,
+  "mismatches": [],
+  "noprune_skipped": [],
+  "noprune_agree": 0,
+  "noprune_total": 0,
+  "distinctness_checks": [
+    {
+      "pair": "same_degree",
+      "differ": true
+    },
+    {
+      "pair": "100_random",
+      "unique_bliss": 100,
+      "total": 100
+    }
+  ],
+  "status": "PASS",
+  "wall_seconds": 1.0,
+  "code_git_commit": "d23ba0fc2accf58e5f40f126850573cb0b6551dc"
+}
