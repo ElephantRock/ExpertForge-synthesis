@@ -1,0 +1,216 @@
+{
+  "structures_tested": 121,
+  "renamings_per_structure": 8,
+  "mismatches": [
+    {
+      "structure": "cycle_3",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cycle_4",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cycle_5",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cycle_6",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cycle_7",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cycle_8",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "disconnected_2x3",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "disconnected_3x4",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "disconnected_4x3",
+      "kind": "canonical_mismatch",
+      "ref": "{\"depth\":1,\"facts\":[[\"+\"",
+      "opt": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "disconnected_2x5",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cotwins_3",
+      "kind": "renaming_invariance",
+      "seed": 1,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cotwins_4",
+      "kind": "renaming_invariance",
+      "seed": 1,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cotwins_5",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "cotwins_6",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "rand_11",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "rand_24",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "rand_47",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "rand_50",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "rand_65",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "rand_68",
+      "kind": "renaming_invariance",
+      "seed": 1,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    },
+    {
+      "structure": "rand_73",
+      "kind": "renaming_invariance",
+      "seed": 0,
+      "orig": "{\"depth\":1,\"facts\":[[\"+\"",
+      "renamed": "{\"depth\":1,\"facts\":[[\"+\""
+    }
+  ],
+  "distinctness_checks": [
+    {
+      "pair": "same_degree",
+      "differ": true
+    },
+    {
+      "pair": "50_random",
+      "unique": 50,
+      "total": 50
+    }
+  ],
+  "no_prune_skipped": [
+    "real_ID_d1_0_ENTAILED",
+    "real_ID_d1_0_CONTRADICTED",
+    "real_ID_d1_0_UNKNOWN",
+    "real_ID_d1_1_ENTAILED",
+    "real_ID_d1_1_CONTRADICTED",
+    "real_ID_d1_1_UNKNOWN",
+    "real_ID_d1_2_ENTAILED",
+    "real_ID_d1_2_CONTRADICTED",
+    "real_ID_d1_2_UNKNOWN",
+    "real_ID_d1_3_ENTAILED",
+    "real_ID_d1_3_CONTRADICTED",
+    "real_ID_d1_3_UNKNOWN",
+    "real_ID_d2_0_ENTAILED",
+    "real_ID_d2_0_CONTRADICTED",
+    "real_ID_d2_0_UNKNOWN",
+    "real_ID_d2_1_ENTAILED",
+    "real_ID_d2_1_CONTRADICTED",
+    "real_ID_d2_1_UNKNOWN",
+    "real_ID_d2_2_ENTAILED",
+    "real_ID_d2_2_CONTRADICTED",
+    "real_ID_d2_2_UNKNOWN",
+    "real_ID_d2_3_ENTAILED",
+    "real_ID_d2_3_CONTRADICTED",
+    "real_ID_d2_3_UNKNOWN",
+    "real_ID_d3_0_ENTAILED",
+    "real_ID_d3_0_CONTRADICTED",
+    "real_ID_d3_0_UNKNOWN",
+    "real_ID_d3_1_ENTAILED",
+    "real_ID_d3_1_CONTRADICTED",
+    "real_ID_d3_1_UNKNOWN",
+    "real_ID_d3_2_ENTAILED",
+    "real_ID_d3_2_CONTRADICTED",
+    "real_ID_d3_2_UNKNOWN",
+    "real_ID_d3_3_ENTAILED",
+    "real_ID_d3_3_CONTRADICTED",
+    "real_ID_d3_3_UNKNOWN",
+    "real_ID_d4_0_ENTAILED",
+    "real_ID_d4_0_CONTRADICTED",
+    "real_ID_d4_0_UNKNOWN",
+    "real_ID_d4_1_ENTAILED",
+    "real_ID_d4_1_CONTRADICTED",
+    "real_ID_d4_1_UNKNOWN",
+    "real_ID_d4_2_ENTAILED",
+    "real_ID_d4_2_CONTRADICTED",
+    "real_ID_d4_2_UNKNOWN",
+    "real_ID_d4_3_ENTAILED",
+    "real_ID_d4_3_CONTRADICTED",
+    "real_ID_d4_3_UNKNOWN"
+  ],
+  "status": "FAIL",
+  "wall_seconds": 1122.3,
+  "code_git_commit": "5344bbf242f9b574c924ec9663a9badee12c158b"
+}
