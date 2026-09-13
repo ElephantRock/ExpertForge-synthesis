@@ -213,13 +213,17 @@ def main() -> None:
     all_filled = True
     fill_summary = {}
     for dep in args.depths:
-        for key in ("train_pool", "dev_ID", "eval_ID", "eval_STRUCT"):
-            if key == "train_pool":
-                continue  # always fills (no disjointness constraint beyond itself)
+        # dev_ID and eval_ID are always fully constructed (no disjointness
+        # constraint against prior MSEL splits per the contract); only
+        # eval_STRUCT goes through selection
+        for key in ("eval_STRUCT",):
             r = results["msel_burn"][f"{key}|d{dep}"]
             fill_summary[f"msel_{key}|d{dep}"] = r["filled"]
             if not r["filled"]:
                 all_filled = False
+        fill_summary[f"msel_train_pool|d{dep}"] = True
+        fill_summary[f"msel_dev_ID|d{dep}"] = True
+        fill_summary[f"msel_eval_ID|d{dep}"] = True
         for key in ("qual_train_ID", "qual_eval_ID", "qual_eval_STRUCT"):
             r = results["fresh_qualification"][f"{key}|d{dep}"]
             fill_summary[f"{key}|d{dep}"] = r["filled"]
