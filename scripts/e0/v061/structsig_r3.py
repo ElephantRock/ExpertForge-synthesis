@@ -75,7 +75,12 @@ _COLOR_NAMES = {v: k for k, v in _COLOR_VOCABULARY.items()}
 
 def _lit_color(role: str, sign: str, term: str) -> int:
     grounded = "G" if term != "x" else "X"
-    polarity = "PLUS" if sign == "+" else "MINUS"
+    if sign == "+":
+        polarity = "PLUS"
+    elif sign == "-":
+        polarity = "MINUS"
+    else:
+        raise ValueError(f"invalid polarity {sign!r}: must be '+' or '-'")
     key = f"LIT_{role}_{polarity}_{grounded}"
     if key not in _COLOR_VOCABULARY:
         raise ValueError(f"literal color not in frozen vocabulary: {key}")
@@ -120,8 +125,10 @@ def _build_incidence_graph(example: dict):
     for e in sorted(all_ents):
         ent_ids[e] = add_vertex(_COLOR_VOCABULARY["ENTITY"])
 
-    # Depth marker
-    depth_key = f"DEPTH_{depth}" if 1 <= depth <= 4 else "DEPTH_1"
+    # Depth marker — fail closed on invalid depth
+    if depth not in (1, 2, 3, 4):
+        raise ValueError(f"invalid reasoning depth {depth!r}: must be 1..4")
+    depth_key = f"DEPTH_{depth}"
     depth_vid = add_vertex(_COLOR_VOCABULARY[depth_key])
 
     # Fact owners + literal occurrences

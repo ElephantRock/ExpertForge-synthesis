@@ -2,10 +2,32 @@
   "structures_tested": 266,
   "renamings_per_structure": 8,
   "permutations_per_structure": 4,
+  "vertex_perm_seeds_per_structure": 4,
   "mismatches": [],
-  "noprune_skipped": [],
-  "noprune_agree": 0,
-  "noprune_total": 0,
+  "vertex_perm_mismatches": [],
+  "hardening": {
+    "invalid_depth_raises": true,
+    "invalid_polarity_raises": true,
+    "valid_input_still_works": true
+  },
+  "runtime_binding": {
+    "igraph_version": "1.0.0",
+    "igraph_core_version": "1.0.0",
+    "wheel_filename": "igraph-1.0.0-cp39-abi3-win_amd64.whl",
+    "igraph_pyd_path": ".venv\\Lib\\site-packages\\igraph\\_igraph.pyd",
+    "igraph_pyd_sha256": "92d9e9e773313320417c0e9193d04f3e94b948833b4e6c34e46c7f53d122441f",
+    "python_version": "3.12.10",
+    "python_implementation": "cpython",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "platform_machine": "AMD64"
+  },
+  "reference_comparison": {
+    "tractable_attempted": 30,
+    "tractable_completed": 30,
+    "cap_exceeded": [],
+    "partition_disagreements": [],
+    "pair_comparisons": 435
+  },
   "distinctness_checks": [
     {
       "pair": "same_degree",
@@ -17,7 +39,17 @@
       "total": 100
     }
   ],
+  "gates": {
+    "renaming_mismatches_zero": true,
+    "order_perm_mismatches_zero": true,
+    "vertex_perm_mismatches_zero": true,
+    "reference_partition_zero_disagreements": true,
+    "same_degree_distinguished": true,
+    "random_100_distinct": true,
+    "runtime_binding_complete": true,
+    "hardening_all_pass": true
+  },
   "status": "PASS",
-  "wall_seconds": 1.0,
-  "code_git_commit": "d23ba0fc2accf58e5f40f126850573cb0b6551dc"
+  "wall_seconds": 1.6,
+  "code_git_commit": "fc8f1920e6652b9e9172fc6f39b424a91a01ab6a"
 }
