@@ -1,5 +1,21 @@
 # E0 v0.6.1 Mechanism Bootstrap — Lane Status
 
+## V06-R3-BINDING-REPLAY-1 — COMPLETE (clean replay PASS from `6af2cf2`)
+
+**GI arithmetic correction:** the 4k correctness pilot (`048420a`) reports **1,069** independent GI checks, not the 1,097 stated in the prior summary and commit message. Of those 1,069: 997 passed, 72 exceeded the step budget, **0 failed**. Completed GI coverage = **93.3%** (not 91%). The per-cell JSON in the committed evidence is internally consistent; the error was only in the human aggregate. `048420a` itself is preserved untouched.
+
+Oracle replay from clean `6af2cf2` (evidence at `f0b54c7`): 8/8 gates PASS, 266 structures, 0 mismatches, stable SHA-256 vperm seeds, wheel SHA-256 `faeff8ede0cf...` recomputed from the actual wheel file and bound. The prior `fc8f192` oracle run is scientifically concordant but governance-superseded (it ran from an uncommitted tree).
+
+## r3 BLISS canonicalization — ACCEPTED; 4k correctness pilot — ACCEPTED
+
+structsig_r3 (igraph 1.0.0 BLISS, colored typed incidence graph, sorted three-variant orbit family signature) is accepted as the authoritative canonicalization mechanism. The custom-IR route (r0/r1/r2/r2A) is CLOSED/REJECTED; all incident evidence preserved under `incidents/`.
+
+Correctness pilot (`048420a`, from clean `042248d`): 4,000 families (500/depth/surface × 8 cells), **zero** verifier / renaming / permutation / cross-cell / completed-GI failures. Independent GI layer is **sufficient corroboration, not a blocking proof** (authority ruling); no further matcher work before depletion.
+
+## Next authorized stage: full MSEL-burn structural depletion probe
+
+Per the authority ruling: simulate the complete MSEL structural burn (32,000 train + 500 dev_ID + 500 eval_ID + 500 structurally-disjoint eval_STRUCT families per depth), burn every MSEL signature, then from a separate burned namespace measure fresh-qualification acceptance against the entire burn set. Report discovery curves, per-split consumed signatures, eval_STRUCT selection rejection rate, and fresh-qualification rejection rate by depth.
+
 ## Structural-support preflight r1 — COMPLETE: **PASS** (implementation-validating); support measurement delivered for authority sufficiency ruling
 
 **SUPERSESSION NOTICE:** the r0 preflight (`74a80fd`, `STRUCTURAL_PREFLIGHT.json`) was ruled `STRUCTURAL_PREFLIGHT_INVALID_FOR_SUPPORT_CONCLUSION`: the original signature was non-injective w.r.t. the required family structure (min-of-orbit collapse, set-destroyed incidence multiplicity, WL colors treated as exact canonical labels, truncated internal hashes). Its structural-exhaustion interpretation — including the ~800–2,200 space estimates and the "generator expansion already required" conclusion — is **superseded and withdrawn**. The r0 evidence is preserved unmodified as the incident record; the r0 fail-closed governance behavior (402k withheld) was accepted and remains in force.
