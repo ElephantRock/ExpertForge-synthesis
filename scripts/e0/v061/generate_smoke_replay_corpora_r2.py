@@ -166,7 +166,7 @@ def generate_fresh(ns: str, label: str, train_per_cell: int, dev_per_cell: int,
     (out_dir / "dev.jsonl").write_bytes(dev_data)
     dev_sha = hashlib.sha256(dev_data).hexdigest()
 
-    fixture_sigs = [fam_sig(f) for fam in train_fams] + [fam_sig(f) for fam in dev_fams]
+    fixture_sigs = [fam_sig(fam) for fam in train_fams] + [fam_sig(fam) for fam in dev_fams]
     stats.update({
         "namespace": ns,
         "train_families": len(train_fams),
