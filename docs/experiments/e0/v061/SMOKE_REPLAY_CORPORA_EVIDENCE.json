@@ -1,0 +1,39 @@
+{
+  "schema_id": "E0-V061-SMOKE-REPLAY-CORPORA-v0",
+  "authority": "V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED",
+  "code_git_commit": "ac239192bdb6b5ebc30ef095eceb19b2c29993e9",
+  "smoke_corpus": {
+    "namespace": "ExpertForge-E0-v061-smoke-burn",
+    "families": 8000,
+    "train_examples": 24000,
+    "dev_examples": 600,
+    "train_sha256": "dac0ef07138eaa86f2fc864c2339f9953b836529f379c2a387deaadc330f0f03",
+    "dev_sha256": "381b5cfbd4c811ba2f7db476b456549a37cbe936d9679f0c529ad183e82ad568",
+    "verifier_errors": 0,
+    "family_id_overlaps_with_msel": 0,
+    "structsig_overlaps_with_msel_descriptive": 5021,
+    "family_id_disjoint": true,
+    "disjoint": true,
+    "seconds": 169.9
+  },
+  "replay_corpus": {
+    "namespace": "ExpertForge-E0-v061-replay-burn",
+    "families": 800,
+    "train_examples": 2400,
+    "dev_examples": 600,
+    "train_sha256": "3a2b6672ee1e1554f8e41ef22966790273c2c19bab97c1cdf3ea3d2a35bfa839",
+    "dev_sha256": "d37a359cbb36ba4df7a53c3259c7d70840c70728c21a155b4b7d05c83344a04c",
+    "verifier_errors": 0,
+    "family_id_overlaps_with_msel": 0,
+    "structsig_overlaps_with_msel_descriptive": 499,
+    "family_id_disjoint": true,
+    "disjoint": true,
+    "seconds": 4.2
+  },
+  "namespaces_burned": [
+    "ExpertForge-E0-v061-smoke-burn",
+    "ExpertForge-E0-v061-replay-burn"
+  ],
+  "status": "PASS",
+  "wall_seconds": 174.3
+}

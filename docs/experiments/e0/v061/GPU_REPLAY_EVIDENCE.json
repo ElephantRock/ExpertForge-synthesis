@@ -1,0 +1,122 @@
+{
+  "schema_id": "E0-V061-GPU-REPLAY-EVIDENCE-v0",
+  "authority": "V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED",
+  "code_git_commit": "877cd41297b71b8b30100c6b2038fed0ba77aaca",
+  "corpus_digests": {
+    "train.jsonl": "3a2b6672ee1e1554f8e41ef22966790273c2c19bab97c1cdf3ea3d2a35bfa839",
+    "dev.jsonl": "d37a359cbb36ba4df7a53c3259c7d70840c70728c21a155b4b7d05c83344a04c"
+  },
+  "replay_updates": 120,
+  "checkpoints_per_run": 3,
+  "comparisons": [
+    {
+      "family": "c0",
+      "run1_commit": "ac239192bdb6b5ebc30ef095eceb19b2c29993e9",
+      "run2_commit": "ac239192bdb6b5ebc30ef095eceb19b2c29993e9",
+      "metric_key": "dev_macro_cell_sma",
+      "checkpoint_updates": [
+        40,
+        80,
+        120
+      ],
+      "checkpoint_bindings": [
+        {
+          "update": 40,
+          "state_digest_run1": "fb5cd17d9b4817b068f5e04c9b4aa6e2bb8a098fe95c878cc2a12a5a73ede367",
+          "state_digest_run2": "fb5cd17d9b4817b068f5e04c9b4aa6e2bb8a098fe95c878cc2a12a5a73ede367",
+          "dev_argmax_sha256_run1": "6c8dc85429f0bad26f2317f7004427a227bc4524611b3ec94ac14706a917f3b6",
+          "dev_argmax_sha256_run2": "6c8dc85429f0bad26f2317f7004427a227bc4524611b3ec94ac14706a917f3b6",
+          "dev_logits_sha256_run1": "850226c07fbb68ab26aaf78e08673631cfb931e1f7b27a4f29c7bee064e8f829",
+          "dev_logits_sha256_run2": "850226c07fbb68ab26aaf78e08673631cfb931e1f7b27a4f29c7bee064e8f829",
+          "metric_run1": 0.33499999999999996,
+          "metric_run2": 0.33499999999999996
+        },
+        {
+          "update": 80,
+          "state_digest_run1": "770e7a471db93d0b750e889e7175fef86c3bd1bd3249d8d3de23660ef4f949e2",
+          "state_digest_run2": "770e7a471db93d0b750e889e7175fef86c3bd1bd3249d8d3de23660ef4f949e2",
+          "dev_argmax_sha256_run1": "75d10e7d262d4786079717e86611e977e4e2d1755ad9fe8f5bb500c5d35106be",
+          "dev_argmax_sha256_run2": "75d10e7d262d4786079717e86611e977e4e2d1755ad9fe8f5bb500c5d35106be",
+          "dev_logits_sha256_run1": "3deae8932248cf267997a6cbf67d8b625c6597b64d3e77c1c85ee6bc10fd11a3",
+          "dev_logits_sha256_run2": "3deae8932248cf267997a6cbf67d8b625c6597b64d3e77c1c85ee6bc10fd11a3",
+          "metric_run1": 0.33,
+          "metric_run2": 0.33
+        },
+        {
+          "update": 120,
+          "state_digest_run1": "a97f6814c7d0b35bddbc2ae01edf9918cf1b633e7f5adfc42e3ff7cd23f27f64",
+          "state_digest_run2": "a97f6814c7d0b35bddbc2ae01edf9918cf1b633e7f5adfc42e3ff7cd23f27f64",
+          "dev_argmax_sha256_run1": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_argmax_sha256_run2": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_logits_sha256_run1": "661e6648c92450f5951d74633989ea028366fbf41460e470b446a3e6ef094f70",
+          "dev_logits_sha256_run2": "661e6648c92450f5951d74633989ea028366fbf41460e470b446a3e6ef094f70",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        }
+      ],
+      "exact_match": true,
+      "differences": [],
+      "run1_wall_seconds": 99.5,
+      "run2_wall_seconds": 102.8
+    },
+    {
+      "family": "p0",
+      "run1_commit": "ac239192bdb6b5ebc30ef095eceb19b2c29993e9",
+      "run2_commit": "ac239192bdb6b5ebc30ef095eceb19b2c29993e9",
+      "metric_key": "dev_accuracy",
+      "checkpoint_updates": [
+        40,
+        80,
+        120
+      ],
+      "checkpoint_bindings": [
+        {
+          "update": 40,
+          "state_digest_run1": "c037f69c6e8fb793439d99d2afd3e2564bf2ecf275bb26d51e0649b06e238246",
+          "state_digest_run2": "c037f69c6e8fb793439d99d2afd3e2564bf2ecf275bb26d51e0649b06e238246",
+          "dev_argmax_sha256_run1": "1382855ff7a0067ba2474bca7f8038589677d00ef0a41865b14daf85e0b01245",
+          "dev_argmax_sha256_run2": "1382855ff7a0067ba2474bca7f8038589677d00ef0a41865b14daf85e0b01245",
+          "dev_logits_sha256_run1": "08b3d4695271ae20f086d946942d1c1567036d4b6e97a7973e5772360f5e1413",
+          "dev_logits_sha256_run2": "08b3d4695271ae20f086d946942d1c1567036d4b6e97a7973e5772360f5e1413",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        },
+        {
+          "update": 80,
+          "state_digest_run1": "8da9b5c0b98b7b909f3172cb3f6e93598a5d21559b882f2cf2c872cd3c1ae73f",
+          "state_digest_run2": "8da9b5c0b98b7b909f3172cb3f6e93598a5d21559b882f2cf2c872cd3c1ae73f",
+          "dev_argmax_sha256_run1": "eab37d43ffd4d14cdcbfb1057f8ef4b70cbe5bdca0d278acb12afe21d7917e07",
+          "dev_argmax_sha256_run2": "eab37d43ffd4d14cdcbfb1057f8ef4b70cbe5bdca0d278acb12afe21d7917e07",
+          "dev_logits_sha256_run1": "ca6fe999b9c083eab7eda008282edf8dcd51dbf955df656c9a2e35ee851efdb1",
+          "dev_logits_sha256_run2": "ca6fe999b9c083eab7eda008282edf8dcd51dbf955df656c9a2e35ee851efdb1",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        },
+        {
+          "update": 120,
+          "state_digest_run1": "2a50f2a104665a632fda1290e87b7729feb654fa8ae3fca34cfd4c6c98cd238f",
+          "state_digest_run2": "2a50f2a104665a632fda1290e87b7729feb654fa8ae3fca34cfd4c6c98cd238f",
+          "dev_argmax_sha256_run1": "5cdbbd138800ff5ec9dc2deb50d70411964adb8180ebf2805e4dba867d48454d",
+          "dev_argmax_sha256_run2": "5cdbbd138800ff5ec9dc2deb50d70411964adb8180ebf2805e4dba867d48454d",
+          "dev_logits_sha256_run1": "9961631706aa872e864b6ee43ccbfefea9ca9cc57a54854a5c3d9951125384a7",
+          "dev_logits_sha256_run2": "9961631706aa872e864b6ee43ccbfefea9ca9cc57a54854a5c3d9951125384a7",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        }
+      ],
+      "exact_match": true,
+      "differences": [],
+      "run1_wall_seconds": 69.2,
+      "run2_wall_seconds": 69.7
+    }
+  ],
+  "deterministic_state": {
+    "cublas_workspace_config": ":4096:8",
+    "are_deterministic_algorithms_enabled": true,
+    "cuda_matmul_allow_tf32": false,
+    "cudnn_allow_tf32": false,
+    "cudnn_deterministic": true,
+    "cudnn_benchmark": false
+  },
+  "status": "PASS"
+}

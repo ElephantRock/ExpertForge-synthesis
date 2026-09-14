@@ -1,0 +1,166 @@
+{
+  "schema_id": "E0-V061-GPU-SMOKE-EVIDENCE-v0",
+  "authority": "V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED",
+  "code_git_commit": "ac239192bdb6b5ebc30ef095eceb19b2c29993e9",
+  "seed": 806915476,
+  "arms": [
+    "R16_C0",
+    "P-FT",
+    "P-RANDOM"
+  ],
+  "corpus_digests": {
+    "train.jsonl": "dac0ef07138eaa86f2fc864c2339f9953b836529f379c2a387deaadc330f0f03",
+    "dev.jsonl": "381b5cfbd4c811ba2f7db476b456549a37cbe936d9679f0c529ad183e82ad568"
+  },
+  "gates": {
+    "t400_max_minutes": 19.2,
+    "peak_vram_max_gib": 12.0,
+    "host_rss_max_gib": 64.0,
+    "projection": "1.25 x 20 x t400 <= 8h"
+  },
+  "smokes": [
+    {
+      "arm": "R16_C0",
+      "seed": 806915476,
+      "backbone_init_substream_seed": 266238500,
+      "data_order_substream_seed": 1110695042,
+      "param_count": 53232643,
+      "trainable_param_count": 53232643,
+      "updates": 400,
+      "train_examples": 24000,
+      "dev_examples": 600,
+      "train_wall_seconds": 319.5,
+      "train_wall_minutes": 5.33,
+      "projected_8000_updates_minutes": 133.1,
+      "peak_cuda_allocated_bytes": 3351628288,
+      "peak_cuda_reserved_bytes": 5467275264,
+      "peak_cuda_allocated_gib": 3.121,
+      "peak_cuda_reserved_gib": 5.092,
+      "peak_host_rss_bytes": 1417887744,
+      "smoke_dev_readout_NOT_capability_evidence": {
+        "update": 400,
+        "cmdr_sma": 0.3333333333333333,
+        "lr": 0.0005
+      },
+      "deterministic_state": {
+        "cublas_workspace_config": ":4096:8",
+        "are_deterministic_algorithms_enabled": true,
+        "cuda_matmul_allow_tf32": false,
+        "cudnn_allow_tf32": false,
+        "cudnn_deterministic": true,
+        "cudnn_benchmark": false
+      },
+      "gate_t400": true,
+      "gate_vram": true,
+      "gate_rss": true
+    },
+    {
+      "arm": "P-FT",
+      "seed": 806915476,
+      "backbone_init": "pretrained_ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15",
+      "classifier_init_substream_seed": 5726939,
+      "data_order_substream_seed": 1110695042,
+      "param_count": 44672515,
+      "trainable_param_count": 44672515,
+      "backbone_params": 44670976,
+      "classifier_params": 1539,
+      "updates": 400,
+      "train_examples": 24000,
+      "dev_examples": 600,
+      "token_audit_train": {
+        "count": 24000,
+        "min": 263,
+        "median": 308.5,
+        "p95": 357,
+        "p99": 358,
+        "max": 358,
+        "truncation_count": 0,
+        "unknown_token_count": 0
+      },
+      "nonpadding_token_presentations": 16257947,
+      "train_wall_seconds": 217.3,
+      "train_wall_minutes": 3.62,
+      "projected_8000_updates_minutes": 90.6,
+      "peak_cuda_allocated_bytes": 2189042176,
+      "peak_cuda_reserved_bytes": 3695181824,
+      "peak_cuda_allocated_gib": 2.039,
+      "peak_cuda_reserved_gib": 3.441,
+      "peak_host_rss_bytes": 2048995328,
+      "smoke_dev_readout_NOT_capability_evidence": {
+        "update": 400,
+        "dev_acc": 0.3333333333333333,
+        "lr": 5e-05
+      },
+      "deterministic_state": {
+        "cublas_workspace_config": ":4096:8",
+        "are_deterministic_algorithms_enabled": true,
+        "cuda_matmul_allow_tf32": false,
+        "cudnn_allow_tf32": false,
+        "cudnn_deterministic": true,
+        "cudnn_benchmark": false
+      },
+      "gate_t400": true,
+      "gate_vram": true,
+      "gate_rss": true
+    },
+    {
+      "arm": "P-RANDOM",
+      "seed": 806915476,
+      "backbone_init": "random_from_frozen_config_substream_266238500",
+      "classifier_init_substream_seed": 5726939,
+      "data_order_substream_seed": 1110695042,
+      "param_count": 44672515,
+      "trainable_param_count": 44672515,
+      "backbone_params": 44670976,
+      "classifier_params": 1539,
+      "updates": 400,
+      "train_examples": 24000,
+      "dev_examples": 600,
+      "token_audit_train": {
+        "count": 24000,
+        "min": 263,
+        "median": 308.5,
+        "p95": 357,
+        "p99": 358,
+        "max": 358,
+        "truncation_count": 0,
+        "unknown_token_count": 0
+      },
+      "nonpadding_token_presentations": 16257947,
+      "train_wall_seconds": 217.4,
+      "train_wall_minutes": 3.62,
+      "projected_8000_updates_minutes": 90.6,
+      "peak_cuda_allocated_bytes": 2188859904,
+      "peak_cuda_reserved_bytes": 3565158400,
+      "peak_cuda_allocated_gib": 2.039,
+      "peak_cuda_reserved_gib": 3.32,
+      "peak_host_rss_bytes": 2048995328,
+      "smoke_dev_readout_NOT_capability_evidence": {
+        "update": 400,
+        "dev_acc": 0.3333333333333333,
+        "lr": 5e-05
+      },
+      "deterministic_state": {
+        "cublas_workspace_config": ":4096:8",
+        "are_deterministic_algorithms_enabled": true,
+        "cuda_matmul_allow_tf32": false,
+        "cudnn_allow_tf32": false,
+        "cudnn_deterministic": true,
+        "cudnn_benchmark": false
+      },
+      "gate_t400": true,
+      "gate_vram": true,
+      "gate_rss": true
+    }
+  ],
+  "deterministic_state_at_start": {
+    "cublas_workspace_config": ":4096:8",
+    "are_deterministic_algorithms_enabled": true,
+    "cuda_matmul_allow_tf32": false,
+    "cudnn_allow_tf32": false,
+    "cudnn_deterministic": true,
+    "cudnn_benchmark": false
+  },
+  "deterministic_state_verified": true,
+  "status": "PASS"
+}

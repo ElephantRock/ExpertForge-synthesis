@@ -1,8 +1,26 @@
 # E0 v0.6.1 Mechanism Bootstrap — Lane Status
 
-**Branch:** `e0/v061-mechanism-bootstrap` | **Head:** `0b6681641eaebccd956dddcc6ca32b283a9b6dd4`
+**Branch:** `e0/v061-mechanism-bootstrap` | **Head:** see evidence commits below
 
-## Current state: ALL CPU pre-execution gates closed. Awaiting 400-update GPU smokes + deterministic model replay.
+## Current state: GPU bootstrap COMPLETE (smokes + deterministic replay ALL PASS). All pre-execution gates closed; awaiting authority §17 blocking-matrix audit.
+
+### V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED — COMPLETE: PASS
+- **Code commits (before any GPU execution):** `d4f0fae` (generator + smoke harness + replay harness), `ac23919` (CPU-validation fixes), `877cd41` (compare-evidence digest binding)
+- **Burned fixture corpora** (`SMOKE_REPLAY_CORPORA_EVIDENCE.json`): smoke 8,000 families / 24,000 examples (`ExpertForge-E0-v061-smoke-burn`), replay 800 / 2,400 (`ExpertForge-E0-v061-replay-burn`); family-ID overlap with the 134,000-entry frozen MSEL burn index = **0 both**; verifier errors = 0. StructSig overlap with the burn is descriptive only (5,021 / 499) — skeleton recurrence is intrinsic to the CMDR template space (the burn itself averages ~4.8 families per unique signature).
+- **Resource smokes** (`GPU_SMOKE_EVIDENCE.json`, seed 806915476, bound to `ac23919`):
+  | arm | t400 | projected 8k | peak VRAM | host RSS | gates |
+  |---|---|---|---|---|---|
+  | R16/C0 | 5.33 min | 133.1 min | 5.09 GiB | 1.3 GiB | PASS |
+  | P-FT@R1 | 3.62 min | 90.6 min | 3.44 GiB | 1.9 GiB | PASS |
+  | P-RANDOM@R1 | 3.62 min | 90.6 min | 3.32 GiB | 1.9 GiB | PASS |
+  - P0 native-token audit on the smoke corpus: min 263 / median 308 / p95 357 / max 358 ≤ 384; truncation 0; unknown 0.
+  - Dev readouts at update 400 are resource/trajectory signals on a burned namespace, explicitly NOT capability evidence.
+- **Deterministic model replay** (`GPU_REPLAY_EVIDENCE.json`): C0/R and P0 trainable paths, each trained twice in separate processes under the frozen deterministic preamble, 3 checkpoints each (updates 40/80/120) — **exact match, 0 differences**: bitwise state digests, full dev argmax vectors, float32 logits digests, metric scalars.
+- **Environment facts verified during execution:** installed transformers is **4.50.0** (LM head attribute `embed_out`, `torch_dtype` kwarg) — the working-tree reality the earlier closure-corrigendum fixture also used. P-RANDOM `from_config` initially materialized FP16 from pythia's `config.json` `torch_dtype`; the harness's FP32 dtype assertion caught it and the construction now overrides to FP32 explicitly (authority constraint: no silent FP16 substitution).
+
+### Next: authority §17 24-item blocking-matrix audit over this lane, then (only on explicit release) MECHANISM_SELECTION_EXECUTION_RELEASED work.
+
+## Previous state: ALL CPU pre-execution gates closed. Awaiting 400-update GPU smokes + deterministic model replay.
 
 ### CMDR-MSEL-v0 corpus: FROZEN / IMMUTABLE / ACCEPTED
 - 134,000 families / 402,000 examples / namespace `ExpertForge-E0-v061-msel` (permanently burned)
