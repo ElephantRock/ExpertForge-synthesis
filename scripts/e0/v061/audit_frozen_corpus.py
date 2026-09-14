@@ -29,7 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 import numpy as np
 
 import structsig_r3
-from msel_verifier import independent_verify, LABELS
+from msel_corpus import LABELS
+from msel_verifier import independent_verify
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 CORPUS = REPO_ROOT / "local_data" / "e0_v061_msel"
