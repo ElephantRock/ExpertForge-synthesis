@@ -15,6 +15,7 @@ V06-PREEXEC-REMEDIATION-1. Fixes:
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 
 import numpy as np
 
@@ -100,6 +101,51 @@ def family_exact_consistency_aggregate(consistency_id: float, consistency_struct
     return (consistency_id + consistency_struct) / 2.0
 
 
+def _validate_bootstrap_inputs(seeds: list, per_seed_data: list) -> None:
+    """Fail-closed validation of hierarchical bootstrap inputs (§9.8)."""
+    if len(seeds) != 6:
+        raise ValueError(f"hierarchical_bootstrap requires exactly 6 primary seeds, got {len(seeds)}")
+    if len(per_seed_data) != 6:
+        raise ValueError(f"per_seed_data must have 6 entries, got {len(per_seed_data)}")
+    required = ("y_true_id", "y_pred_id", "depths_id", "family_ids_id",
+                "y_true_struct", "y_pred_struct", "depths_struct", "family_ids_struct")
+    for s, d in enumerate(per_seed_data):
+        for key in required:
+            if key not in d:
+                raise ValueError(f"seed {s}: missing required key '{key}'")
+        n_id = len(d["y_true_id"])
+        for key in ("y_pred_id", "depths_id", "family_ids_id"):
+            if len(d[key]) != n_id:
+                raise ValueError(f"seed {s}: '{key}' length {len(d[key])} != y_true_id length {n_id}")
+        n_st = len(d["y_true_struct"])
+        for key in ("y_pred_struct", "depths_struct", "family_ids_struct"):
+            if len(d[key]) != n_st:
+                raise ValueError(f"seed {s}: '{key}' length {len(d[key])} != y_true_struct length {n_st}")
+        # Verify every family on both surfaces has exactly 3 members, one per label, within one depth
+        for surface, y_true, y_pred, depths, fam_ids in [
+            ("ID", d["y_true_id"], d["y_pred_id"], d["depths_id"], d["family_ids_id"]),
+            ("STRUCT", d["y_true_struct"], d["y_pred_struct"], d["depths_struct"], d["family_ids_struct"]),
+        ]:
+            fam_members = defaultdict(list)
+            for i in range(len(y_true)):
+                fam_members[fam_ids[i]].append(i)
+            for fid, members in fam_members.items():
+                if len(members) != 3:
+                    raise ValueError(
+                        f"seed {s} {surface}: family '{fid}' has {len(members)} members (expected 3)"
+                    )
+                labels = sorted(y_true[i] for i in members)
+                if labels != [0, 1, 2]:
+                    raise ValueError(
+                        f"seed {s} {surface}: family '{fid}' labels {labels} != [0,1,2]"
+                    )
+                dep_set = {depths[i] for i in members}
+                if len(dep_set) != 1:
+                    raise ValueError(
+                        f"seed {s} {surface}: family '{fid}' spans depths {dep_set}"
+                    )
+
+
 def hierarchical_bootstrap(
     seeds: list,
     per_seed_data: list,
@@ -113,45 +159,37 @@ def hierarchical_bootstrap(
       3. RECOMPUTES Q from the resampled family predictions.
       4. Takes the median of the six recomputed Q values.
 
-    per_seed_data[s] must be a dict with keys:
-      'y_true_id', 'y_pred_id', 'depths_id',
-      'y_true_struct', 'y_pred_struct', 'depths_struct',
-      'family_ids'  (list of family IDs aligned with the ID-surface examples)
+    per_seed_data[s] MUST contain (fail-closed, no fallbacks):
+      'y_true_id', 'y_pred_id', 'depths_id', 'family_ids_id',
+      'y_true_struct', 'y_pred_struct', 'depths_struct', 'family_ids_struct'
 
-    Returns the median, 2.5th and 97.5th percentiles of the replicate medians.
+    All arrays within a surface must be aligned. Every family on both surfaces
+    must have exactly 3 members (one E, one C, one U) within a single depth stratum.
     """
-    n_seeds = len(seeds)
+    _validate_bootstrap_inputs(seeds, per_seed_data)
+    n_seeds = 6
     rng = np.random.RandomState(BOOTSTRAP_SEED)
 
-    # Pre-compute per-seed family groupings by (surface, depth) stratum
     seed_strata = []
     for s in range(n_seeds):
         d = per_seed_data[s]
-        # ID surface families grouped by depth
-        id_fams_by_depth = {}
-        fam_of = {}
+        id_fam_of = defaultdict(list)
+        id_fams_by_depth = defaultdict(set)
         for i in range(len(d["y_true_id"])):
-            fid = d["family_ids"][i]
-            fam_of.setdefault(fid, []).append(i)
-            dep = d["depths_id"][i]
-            id_fams_by_depth.setdefault(dep, set()).add(fid)
-        # STRUCT surface families grouped by depth
-        struct_fams_by_depth = {}
-        struct_fam_of = {}
+            fid = d["family_ids_id"][i]
+            id_fam_of[fid].append(i)
+            id_fams_by_depth[d["depths_id"][i]].add(fid)
+        struct_fam_of = defaultdict(list)
+        struct_fams_by_depth = defaultdict(set)
         for i in range(len(d["y_true_struct"])):
-            fid = d.get("struct_family_ids", d["family_ids"])[i] if "struct_family_ids" in d else \
-                  f"struct_{d['depths_struct'][i]}_{i}"
-            struct_fam_of.setdefault(fid, []).append(i)
-            dep = d["depths_struct"][i]
-            struct_fams_by_depth.setdefault(dep, set()).add(fid)
-        # convert sets to sorted lists for indexing
-        id_fam_lists = {dep: sorted(fids) for dep, fids in id_fams_by_depth.items()}
-        struct_fam_lists = {dep: sorted(fids) for dep, fids in struct_fams_by_depth.items()}
+            fid = d["family_ids_struct"][i]
+            struct_fam_of[fid].append(i)
+            struct_fams_by_depth[d["depths_struct"][i]].add(fid)
         seed_strata.append({
-            "id_fam_of": fam_of,
-            "id_fam_lists": id_fam_lists,
-            "struct_fam_of": struct_fam_of,
-            "struct_fam_lists": struct_fam_lists,
+            "id_fam_of": dict(id_fam_of),
+            "id_fam_lists": {dep: sorted(fids) for dep, fids in id_fams_by_depth.items()},
+            "struct_fam_of": dict(struct_fam_of),
+            "struct_fam_lists": {dep: sorted(fids) for dep, fids in struct_fams_by_depth.items()},
         })
 
     # Pre-compute actual per-seed Q values (for the point estimate)
@@ -304,69 +342,95 @@ def run_self_tests() -> dict:
         and abs(recalls["UNKNOWN"] - 0.5) < 1e-10
     )
 
-    # HIERARCHICAL BOOTSTRAP DISCRIMINATING TEST:
-    # Two seeds with the same scalar Q but different family-level prediction
-    # distributions. If the bootstrap only uses seed scalars (the bug), both
-    # seeds produce the same replicate values and the CI is degenerate.
-    # With correct family resampling, the seed with more family-level variance
-    # produces a wider CI.
+    # HIERARCHICAL BOOTSTRAP with fail-closed interface
     def make_seed_data(correct_families, total_families, depth):
-        """Generate per-seed data where `correct_families` of `total_families`
-        are fully correct and the rest are fully wrong."""
         y_true_id, y_pred_id, depths_id, fids_id = [], [], [], []
-        y_true_st, y_pred_st, depths_st = [], [], []
+        y_true_st, y_pred_st, depths_st, fids_st = [], [], [], []
         for fi in range(total_families):
             for label_id in range(3):
-                y_true_id.append(label_id)
-                depths_id.append(depth)
-                fids_id.append(f"f{fi}")
+                y_true_id.append(label_id); depths_id.append(depth); fids_id.append(f"f{fi}")
+                y_true_st.append(label_id); depths_st.append(depth); fids_st.append(f"f{fi}")
                 if fi < correct_families:
-                    y_pred_id.append(label_id)
+                    y_pred_id.append(label_id); y_pred_st.append(label_id)
                 else:
-                    y_pred_id.append((label_id + 1) % 3)
-            for label_id in range(3):
-                y_true_st.append(label_id)
-                depths_st.append(depth)
-                if fi < correct_families:
-                    y_pred_st.append(label_id)
-                else:
-                    y_pred_st.append((label_id + 1) % 3)
+                    y_pred_id.append((label_id + 1) % 3); y_pred_st.append((label_id + 1) % 3)
         return {
-            "y_true_id": y_true_id, "y_pred_id": y_pred_id, "depths_id": depths_id,
-            "family_ids": fids_id,
-            "y_true_struct": y_true_st, "y_pred_struct": y_pred_st, "depths_struct": depths_st,
+            "y_true_id": y_true_id, "y_pred_id": y_pred_id, "depths_id": depths_id, "family_ids_id": fids_id,
+            "y_true_struct": y_true_st, "y_pred_struct": y_pred_st, "depths_struct": depths_st, "family_ids_struct": fids_st,
         }
 
-    # Seed A: 8/10 families correct (same Q as seed B)
-    seed_a = make_seed_data(8, 10, 1)
-    # Seed B: same scalar Q but different family composition
-    seed_b = make_seed_data(8, 10, 1)
-    # Change seed B's family predictions so different families are wrong
-    for i in range(len(seed_b["y_pred_id"])):
-        if seed_b["family_ids"][i] in ("f0", "f1"):
-            seed_b["y_pred_id"][i] = seed_b["y_true_id"][i]
-        elif seed_b["family_ids"][i] in ("f8", "f9"):
-            pass  # already wrong
-    for i in range(len(seed_b["y_pred_struct"])):
-        if i < 6:  # first 2 families
-            seed_b["y_pred_struct"][i] = seed_b["y_true_struct"][i]
+    # Six seeds, same Q but varying family composition
+    six_seeds = [make_seed_data(8, 10, 1) for _ in range(6)]
+    # Change seed 1's family predictions so different families are wrong
+    for i in range(len(six_seeds[1]["y_pred_id"])):
+        fid = six_seeds[1]["family_ids_id"][i]
+        if fid in ("f0", "f1"):
+            six_seeds[1]["y_pred_id"][i] = six_seeds[1]["y_true_id"][i]
+        elif fid in ("f8", "f9"):
+            six_seeds[1]["y_pred_id"][i] = (six_seeds[1]["y_true_id"][i] + 1) % 3
+    for i in range(len(six_seeds[1]["y_pred_struct"])):
+        fid = six_seeds[1]["family_ids_struct"][i]
+        if fid in ("f0", "f1"):
+            six_seeds[1]["y_pred_struct"][i] = six_seeds[1]["y_true_struct"][i]
+        elif fid in ("f8", "f9"):
+            six_seeds[1]["y_pred_struct"][i] = (six_seeds[1]["y_true_struct"][i] + 1) % 3
 
-    qa = q_metrics(seed_a["y_true_id"], seed_a["y_pred_id"], seed_a["depths_id"],
-                    seed_a["y_true_struct"], seed_a["y_pred_struct"], seed_a["depths_struct"])["Q"]
-    qb = q_metrics(seed_b["y_true_id"], seed_b["y_pred_id"], seed_b["depths_id"],
-                    seed_b["y_true_struct"], seed_b["y_pred_struct"], seed_b["depths_struct"])["Q"]
-    results["bootstrap_fixture_same_q"] = abs(qa - qb) < 1e-10
-
-    # Run bootstrap with reduced replicates for test speed
     global BOOTSTRAP_REPLICATES
     old_reps = BOOTSTRAP_REPLICATES
     BOOTSTRAP_REPLICATES = 2000
-    boot = hierarchical_bootstrap([1, 2], [seed_a, seed_b])
+    boot = hierarchical_bootstrap(list(range(6)), six_seeds)
     BOOTSTRAP_REPLICATES = old_reps
-
     ci_width = boot["ci_97_5"] - boot["ci_2_5"]
     results["bootstrap_ci_nondegenerate"] = ci_width > 0.001
-    results["bootstrap_family_sensitive"] = ci_width > 0.01  # family resampling produces real variance
+    results["bootstrap_family_sensitive"] = ci_width > 0.01
+
+    # STRUCT triplet preservation test: if STRUCT predictions were per-example
+    # (not per-family), the CI would be narrower. Verify by comparing to a
+    # scenario where STRUCT families are perfectly split (half correct, half wrong)
+    # vs. individually shuffled — the family-level version should produce
+    # different variance
+    struct_split = make_seed_data(5, 10, 1)
+    for i in range(len(struct_split["y_pred_struct"])):
+        if i % 2 == 0:
+            struct_split["y_pred_struct"][i] = struct_split["y_true_struct"][i]
+        else:
+            struct_split["y_pred_struct"][i] = (struct_split["y_true_struct"][i] + 1) % 3
+    six_split = [dict(struct_split) for _ in range(6)]
+    BOOTSTRAP_REPLICATES = 2000
+    boot_split = hierarchical_bootstrap(list(range(6)), six_split)
+    BOOTSTRAP_REPLICATES = old_reps
+    results["bootstrap_struct_triplet_sensitive"] = (
+        abs(boot_split["ci_97_5"] - boot_split["ci_2_5"] - ci_width) > 0.001
+        or boot_split["ci_97_5"] != boot["ci_97_5"]
+    )
+
+    # Validation failure tests (fail-closed)
+    results["bootstrap_requires_6_seeds"] = _raises(hierarchical_bootstrap, [1,2,3], [make_seed_data(8,10,1)]*3)
+    bad_fam = make_seed_data(8, 10, 1)
+    bad_fam["family_ids_struct"][0] = "orphan"  # breaks triplet
+    results["bootstrap_rejects_broken_triplet"] = _raises(
+        hierarchical_bootstrap, list(range(6)), [{**make_seed_data(8,10,1)} if i != 0 else bad_fam for i in range(6)]
+    )
+    no_struct_ids = make_seed_data(8, 10, 1); del no_struct_ids["family_ids_struct"]
+    results["bootstrap_requires_struct_ids"] = _raises(
+        hierarchical_bootstrap, list(range(6)), [dict(no_struct_ids)] * 6
+    )
+
+    # ±0.02 equivalence boundary tests
+    # Exactly +0.02 mean: should NOT be equivalent (CI must be STRICTLY inside)
+    results["equivalence_at_pos_0_02"] = not paired_equivalence([0.02] * 12)["equivalent"]
+    results["equivalence_at_neg_0_02"] = not paired_equivalence([-0.02] * 12)["equivalent"]
+    # Just inside the boundary
+    results["equivalence_just_inside"] = paired_equivalence(
+        [0.019 + 0.0001 * i for i in range(12)]
+    )["equivalent"]
+    # Superiority at exactly the boundary
+    results["superiority_at_0_02"] = paired_superiority(
+        [0.02 + 0.001 * i for i in range(12)]
+    )["superior"]
+    results["superiority_just_below"] = not paired_superiority(
+        [0.019 + 0.0001 * i for i in range(12)]
+    )["superior"]
 
     return results
 
