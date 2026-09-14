@@ -1,7 +1,7 @@
 {
   "schema_id": "E0-v0.6.1-MSEL-REPORT-v0",
   "contract_sha256": "a70a910e2781fe5c37d625f5474032efaba32855d16446412eb590d55caf7e5b",
-  "code_sha256": "a9bfb10b2350a3d74acc278e3eb01a3a09781bbca69aad7f03697c62bd891321",
+  "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
   "runtime_snapshot_sha256": "eaeffc307aaf19941513273522e021d2d2a8a20becad07b7641028ed5a19b181",
   "regime_id": "P-FROZEN",
   "master_seed": 806915476,
@@ -12,10 +12,10 @@
     "dataloader_workers": 119232162
   },
   "run_status": "VALID",
-  "attempt_id": "P-FROZEN|806915476|1789415979",
+  "attempt_id": "P-FROZEN|806915476|1789417274",
   "incident_parent": null,
   "working_tree_clean_at_start": true,
-  "repository_commit": "939663209b16237d01242159a38c51d589c3539b",
+  "repository_commit": "62a42c431a1502b7f2001bc8bf8bbb13be297b42",
   "dataset_digests": {
     "manifest": "35f3adf3dd906f99686804fe74ca9fd649d69d5d7a9c4fa7d7466b4298ad9757",
     "train_pool_d1": "4cd24060008a917a6e6bf1967db99224c6a0c8e9eb3f5db592969d96bef24e4f",
@@ -49,7 +49,15 @@
     "tokenizer": "P0 native (pinned snapshot)",
     "tokenizer_len": 50277,
     "backbone_init": "frozen_pretrained",
-    "backbone_frozen": true
+    "backbone_frozen": true,
+    "artifact_digests": {
+      "config.json": "002050231a9b1ec3ac77aa6b9b3bbdc4d923f4068a7dd33b8da72a9bd6ad9a43",
+      "model.safetensors": "ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15",
+      "tokenizer.json": "c24618a1b3e6a38167beff1c72cffd126c3a66254347304b50547d12c5f25624",
+      "tokenizer_config.json": "70e38394e494931c6f773ba41e19460dd4436526b852207367f04341b4066d3f",
+      "special_tokens_map.json": "6f50ab5a5a509a1c309d6171f339b196a900dc9c99ad0408ff23bb615fdae7ad",
+      "README.md": "9a572054d777a1380b67740844abf986e5e077f53e518afbf7dd2193935f4de7"
+    }
   },
   "parameter_count": 44672515,
   "trainable_parameter_count": 1539,
@@ -36113,9 +36121,9 @@
     }
   },
   "resource": {
-    "wall_seconds": 137.3,
+    "wall_seconds": 142.0,
     "peak_accelerator_memory_bytes": 2525848576,
-    "host_peak_rss_bytes": 2598612992,
+    "host_peak_rss_bytes": 2602659840,
     "nonpadding_token_presentations": 14438995,
     "forward_token_count": 14628176,
     "estimated_flops": null,
@@ -36165,7 +36173,7 @@
     "scripts/e0/q2_m0_qualify.py": "504c57bee543d20e48b701f97f42a322802f371e338c0400888c28dd4d29746f",
     "scripts/e0/v061/deterministic_preamble.py": "b59b0d35f8b37ee242c43f271d8efb040a66ff4d0839cf288a6ee11aef691c3f",
     "scripts/e0/v061/gpu_smoke_harness.py": "2f26ec1a015812442aa17fff09cf47b7fb6bcbe1abbcef6dfcac6cec2d36fc4d",
-    "scripts/e0/v061/mechanism_evidence_harness.py": "bc905ed54941bbdf4010aba40d2dc9afc4edf2db6158ff289f240af43b591c0b",
+    "scripts/e0/v061/mechanism_evidence_harness.py": "a833c4658a9967a5275e716eac47ce3ec516a5b34e8620214afa09fb6f0149fa",
     "scripts/e0/v061/msel_metrics.py": "dde9e4e9bae2237dcef45568d325e6bccd4c66d2845a43da33ed17143c4c4118",
     "scripts/e0/v061/msel_stream.py": "71d5233721dcff8542a0fa8bac8af6fd440a69d3646bb965df61cedb6a848a77"
   },
