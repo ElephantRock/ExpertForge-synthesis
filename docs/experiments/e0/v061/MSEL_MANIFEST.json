@@ -1,0 +1,117 @@
+{
+  "schema_id": "CMDR-MSEL-MANIFEST-v0",
+  "namespace": "ExpertForge-E0-v061-msel",
+  "generator": "msel_corpus.py (byte-identical to cfe0840)",
+  "canonicalizer": "structsig_r3.py (BLISS via igraph 1.0.0)",
+  "code_git_commit": "25b10b7cdfd2f00d5a201c243fb25fe986123655",
+  "spec_binding": {
+    "candidate_sha256": "a70a910e2781fe5c37d625f5474032efaba32855d16446412eb590d55caf7e5b",
+    "addendum_file_sha256": "eecccdc3b6cb1e818d5084323c3101e5ce441bd9669ba97e0d91d74a038a950b",
+    "addendum_commit": "aef3f7309e0cc970b5a42d26894c2c9db34bcf4e",
+    "corrigendum_commit": "e33516655c05823ff88c3f6108f793b488d39c3f"
+  },
+  "corpus_invariants": {
+    "total_families": 134000,
+    "total_examples": 402000,
+    "surface_binding": "train_pool = ID only (SPEC-BOUND addendum 1)",
+    "eval_struct_selection": "first-500 ascending index, StructSig-disjoint from ID burn, no within-split uniqueness, 10k ceiling"
+  },
+  "splits": {
+    "train_pool_d1": {
+      "examples": 96000,
+      "sha256": "4cd24060008a917a6e6bf1967db99224c6a0c8e9eb3f5db592969d96bef24e4f"
+    },
+    "train_pool_d2": {
+      "examples": 96000,
+      "sha256": "9a924cb8b90bf24b9dbe865aaad7f10a9d3f5a9d23409345c97c94e0f2e5ba13"
+    },
+    "train_pool_d3": {
+      "examples": 96000,
+      "sha256": "7013f2c1f75286bb9c1a2d08b20b06f32ea2f49842c59f6bc46a67e1a2431e52"
+    },
+    "train_pool_d4": {
+      "examples": 96000,
+      "sha256": "c02ec682ff7e26391454c462b97f1d9f9cfbea5ab49eae22935dc122055ff4fb"
+    },
+    "dev_ID_d1": {
+      "examples": 1500,
+      "sha256": "882d972f90386b79fcc5c448501858a687e65f848b5e18e293b6d043f6b07bad"
+    },
+    "dev_ID_d2": {
+      "examples": 1500,
+      "sha256": "0920565642be35397db345d8027d1cc464a51186d82cd980df2cc7296e11d6f1"
+    },
+    "dev_ID_d3": {
+      "examples": 1500,
+      "sha256": "f82b54b076cc7273e4b2d47648a976cf53ef93e21902787b3a6b90d6f6278b75"
+    },
+    "dev_ID_d4": {
+      "examples": 1500,
+      "sha256": "4b08fb53ddbcbadaae7e43443cfc22d4fd1ca7bfb37b9254dd327e294792cc18"
+    },
+    "eval_ID_d1": {
+      "examples": 1500,
+      "sha256": "236ddff997e3d498615109d68b1777ff2d14f933e74ce62f482754b4c6db127f"
+    },
+    "eval_ID_d2": {
+      "examples": 1500,
+      "sha256": "4b6fcfb1cc0315511a04b0c429f31f60971c865b02401c3493e270783ff0998e"
+    },
+    "eval_ID_d3": {
+      "examples": 1500,
+      "sha256": "d11b515495f39569055f347cc7b9843feb436c38d3c6e7d93189cc45ae9a4d6b"
+    },
+    "eval_ID_d4": {
+      "examples": 1500,
+      "sha256": "fa568c6f13705b07ad50167a4245df4de7ad03aea3281d96f68086fbf1d9efa6"
+    },
+    "eval_STRUCT_d1": {
+      "examples": 1500,
+      "sha256": "3da8996e1e4586bbf203fe7537f51a5c7084ceffc70b5e03aebe237e0cece05f"
+    },
+    "eval_STRUCT_d2": {
+      "examples": 1500,
+      "sha256": "da9838f287090a31ac8c7abc0ad87661fb6de86a904efebdf8df3e2d3dda4277"
+    },
+    "eval_STRUCT_d3": {
+      "examples": 1500,
+      "sha256": "ed4d43ad94e4a5c4d7d3f3d288e5d508bf1b8017ec69ddda06d35e12bde4ef77"
+    },
+    "eval_STRUCT_d4": {
+      "examples": 1500,
+      "sha256": "34cf8b81257631b72fa01b417b0b35e3ab3b815a1dab36278a08687428ba7f21"
+    }
+  },
+  "audit_results": {
+    "verifier": {
+      "status": "PASS",
+      "errors": 0,
+      "note": "independent proof verifier + counterfactual invariance over all 134,000 families"
+    },
+    "family_id_leakage": {
+      "status": "PASS",
+      "pairwise_overlap": 0,
+      "note": "all 6 split-pairs checked"
+    },
+    "rendered_string_leakage": {
+      "status": "PASS",
+      "pairwise_overlap": 0
+    },
+    "eval_struct_isolation": {
+      "status": "PASS",
+      "overlap_with_id_splits": 0
+    },
+    "shortcut_audits": {
+      "gate": "Q_shortcut <= 0.38",
+      "scores": {
+        "nuisance|eval_ID": 0.333333,
+        "nuisance|eval_STRUCT": 0.333333,
+        "lexical|eval_ID": 0.333333,
+        "lexical|eval_STRUCT": 0.333333
+      },
+      "status": "PASS"
+    }
+  },
+  "status": "PASS",
+  "wall_note": "corpus materialized 2026-09-14 ~06:21-08:49 UTC; shortcut audit crashed in first run (API mismatch), rerun from written JSONL files"
+}
