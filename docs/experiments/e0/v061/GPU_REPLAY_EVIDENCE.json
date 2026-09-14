@@ -1,0 +1,122 @@
+{
+  "schema_id": "E0-V061-GPU-REPLAY-EVIDENCE-v0",
+  "authority": "V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED",
+  "code_git_commit": "4e1977e3d1fc66330e81cf2382ba314a5427186d",
+  "corpus_digests": {
+    "train.jsonl": "b14c484961e13003da03c845ffdbf4da885836f37069ebc430968d791e887ad0",
+    "dev.jsonl": "1288d39c470809ae5a052be71581966efada50df8c088d5ef3c43b575cb05742"
+  },
+  "replay_updates": 120,
+  "checkpoints_per_run": 3,
+  "comparisons": [
+    {
+      "family": "c0",
+      "run1_commit": "4e1977e3d1fc66330e81cf2382ba314a5427186d",
+      "run2_commit": "4e1977e3d1fc66330e81cf2382ba314a5427186d",
+      "metric_key": "dev_macro_cell_sma",
+      "checkpoint_updates": [
+        40,
+        80,
+        120
+      ],
+      "checkpoint_bindings": [
+        {
+          "update": 40,
+          "state_digest_run1": "c1d7582e30e0918b066e0d8e46b6aec1d76b8bb17c6b8926f7a42d4b4acbae50",
+          "state_digest_run2": "c1d7582e30e0918b066e0d8e46b6aec1d76b8bb17c6b8926f7a42d4b4acbae50",
+          "dev_argmax_sha256_run1": "0b089fbef2b4dec40609fed1a276041c31feafc8e6322470aa31bc48d2519f70",
+          "dev_argmax_sha256_run2": "0b089fbef2b4dec40609fed1a276041c31feafc8e6322470aa31bc48d2519f70",
+          "dev_logits_sha256_run1": "29ceaea8f021bb210a3fb17397c0042cecbab20bacc009f23c62c7ad39859771",
+          "dev_logits_sha256_run2": "29ceaea8f021bb210a3fb17397c0042cecbab20bacc009f23c62c7ad39859771",
+          "metric_run1": 0.33666666666666667,
+          "metric_run2": 0.33666666666666667
+        },
+        {
+          "update": 80,
+          "state_digest_run1": "c4a6bc02f8c1eef24561399d53b3db0c7aa9ad6e34a2441c0d1a5390085e74f5",
+          "state_digest_run2": "c4a6bc02f8c1eef24561399d53b3db0c7aa9ad6e34a2441c0d1a5390085e74f5",
+          "dev_argmax_sha256_run1": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_argmax_sha256_run2": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_logits_sha256_run1": "5b8d95ea7ba7da85af5d8e4e44a59b3e6d97ac1fdb0834d88597211016abc257",
+          "dev_logits_sha256_run2": "5b8d95ea7ba7da85af5d8e4e44a59b3e6d97ac1fdb0834d88597211016abc257",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        },
+        {
+          "update": 120,
+          "state_digest_run1": "0173b16b0cd466362009abf21285d6f2d9babaccb60517e0f4b9e405327ae778",
+          "state_digest_run2": "0173b16b0cd466362009abf21285d6f2d9babaccb60517e0f4b9e405327ae778",
+          "dev_argmax_sha256_run1": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_argmax_sha256_run2": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_logits_sha256_run1": "7922655f4d4ee9478c46237eb6b0575793d143775a8d070d5cfbcc6ac097a324",
+          "dev_logits_sha256_run2": "7922655f4d4ee9478c46237eb6b0575793d143775a8d070d5cfbcc6ac097a324",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        }
+      ],
+      "exact_match": true,
+      "differences": [],
+      "run1_wall_seconds": 102.6,
+      "run2_wall_seconds": 102.6
+    },
+    {
+      "family": "p0",
+      "run1_commit": "4e1977e3d1fc66330e81cf2382ba314a5427186d",
+      "run2_commit": "4e1977e3d1fc66330e81cf2382ba314a5427186d",
+      "metric_key": "dev_accuracy",
+      "checkpoint_updates": [
+        40,
+        80,
+        120
+      ],
+      "checkpoint_bindings": [
+        {
+          "update": 40,
+          "state_digest_run1": "36b58d2345fbdf2296882a137f8c18cffe70afae09a1c09fbbfef376ea892bdd",
+          "state_digest_run2": "36b58d2345fbdf2296882a137f8c18cffe70afae09a1c09fbbfef376ea892bdd",
+          "dev_argmax_sha256_run1": "f3018f41df2dfa772f4520fc0c8cb38ac8a48a965263b2fe607541ff4ac8a505",
+          "dev_argmax_sha256_run2": "f3018f41df2dfa772f4520fc0c8cb38ac8a48a965263b2fe607541ff4ac8a505",
+          "dev_logits_sha256_run1": "182cd5dd854412f1bd2c91a954468e21330b4e3df1b3e9d4934add8b1f0bb367",
+          "dev_logits_sha256_run2": "182cd5dd854412f1bd2c91a954468e21330b4e3df1b3e9d4934add8b1f0bb367",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        },
+        {
+          "update": 80,
+          "state_digest_run1": "332aa4e89bee36ffe743e682f7660e99c6a6252206a88e467db9b2c805601104",
+          "state_digest_run2": "332aa4e89bee36ffe743e682f7660e99c6a6252206a88e467db9b2c805601104",
+          "dev_argmax_sha256_run1": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_argmax_sha256_run2": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_logits_sha256_run1": "fd3fb68297773c74b8a0b2cfa92c04ffb540c990ac61e77682908cb574b4043a",
+          "dev_logits_sha256_run2": "fd3fb68297773c74b8a0b2cfa92c04ffb540c990ac61e77682908cb574b4043a",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        },
+        {
+          "update": 120,
+          "state_digest_run1": "3384f9e7a90ee066acb375ba7523a1eeddc024bd2c28eb16c649d5d50656604e",
+          "state_digest_run2": "3384f9e7a90ee066acb375ba7523a1eeddc024bd2c28eb16c649d5d50656604e",
+          "dev_argmax_sha256_run1": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_argmax_sha256_run2": "bb733bfa9e8299788482dc42db33fb0968dc7399860cb2d059fb5e228387120e",
+          "dev_logits_sha256_run1": "54072fe93455be13d6f8907f7b5be4a7b308fd73755bc69522d3618a4031c234",
+          "dev_logits_sha256_run2": "54072fe93455be13d6f8907f7b5be4a7b308fd73755bc69522d3618a4031c234",
+          "metric_run1": 0.3333333333333333,
+          "metric_run2": 0.3333333333333333
+        }
+      ],
+      "exact_match": true,
+      "differences": [],
+      "run1_wall_seconds": 68.4,
+      "run2_wall_seconds": 68.8
+    }
+  ],
+  "deterministic_state": {
+    "cublas_workspace_config": ":4096:8",
+    "are_deterministic_algorithms_enabled": true,
+    "cuda_matmul_allow_tf32": false,
+    "cudnn_allow_tf32": false,
+    "cudnn_deterministic": true,
+    "cudnn_benchmark": false
+  },
+  "status": "PASS"
+}

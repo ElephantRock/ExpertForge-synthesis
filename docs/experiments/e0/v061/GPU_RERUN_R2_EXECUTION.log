@@ -1,0 +1,47 @@
+=== R16/C0 smoke (400 updates) ===
+  train=24000 dev=600 examples
+    update 400: dev SMA=0.3333 lr=5.000e-04
+  t400=5.24min peak_reserved=5.092GiB gates t400/vram/rss = True/True/True
+=== P-FT@R1 smoke (400 updates) ===
+  tokens[train] min=265 med=310 p95=357 p99=358 max=358 trunc=0 unk=0
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/76 [00:00<?, ?it/s]Loading weights: 100%|██████████| 76/76 [00:00<00:00, 3040.13it/s]
+    update 400: dev acc=0.3333 lr=5.000e-05
+  t400=3.61min peak_reserved=2.566GiB gates t400/vram/rss = True/True/True
+=== P-RANDOM@R1 smoke (400 updates) ===
+  tokens[train] min=265 med=310 p95=357 p99=358 max=358 trunc=0 unk=0
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+    update 400: dev acc=0.3333 lr=5.000e-05
+  t400=3.67min peak_reserved=2.438GiB gates t400/vram/rss = True/True/True
+
+STATUS: PASS  evidence: C:\AI\ExpertForge-synthesis\docs\experiments\e0\v061\GPU_SMOKE_EVIDENCE.json
+  replay train=2400 dev=600
+    update 40: sma=0.336667 state=c1d7582e30e0918b
+    update 80: sma=0.333333 state=c4a6bc02f8c1eef2
+    update 120: sma=0.333333 state=0173b16b0cd46636
+
+run record: C:\AI\ExpertForge-synthesis\local_data\e0_v061_replay_r2\runs\replay_c0_run1.json
+  replay train=2400 dev=600
+    update 40: sma=0.336667 state=c1d7582e30e0918b
+    update 80: sma=0.333333 state=c4a6bc02f8c1eef2
+    update 120: sma=0.333333 state=0173b16b0cd46636
+
+run record: C:\AI\ExpertForge-synthesis\local_data\e0_v061_replay_r2\runs\replay_c0_run2.json
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/76 [00:00<?, ?it/s]Loading weights: 100%|██████████| 76/76 [00:00<00:00, 5428.41it/s]
+    update 40: acc=0.333333 state=36b58d2345fbdf22
+    update 80: acc=0.333333 state=332aa4e89bee36ff
+    update 120: acc=0.333333 state=3384f9e7a90ee066
+
+run record: C:\AI\ExpertForge-synthesis\local_data\e0_v061_replay_r2\runs\replay_p0_run1.json
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/76 [00:00<?, ?it/s]Loading weights: 100%|██████████| 76/76 [00:00<00:00, 4381.56it/s]
+    update 40: acc=0.333333 state=36b58d2345fbdf22
+    update 80: acc=0.333333 state=332aa4e89bee36ff
+    update 120: acc=0.333333 state=3384f9e7a90ee066
+
+run record: C:\AI\ExpertForge-synthesis\local_data\e0_v061_replay_r2\runs\replay_p0_run2.json
+  c0: exact_match=True (0 diffs)
+  p0: exact_match=True (0 diffs)
+
+STATUS: PASS  evidence: C:\AI\ExpertForge-synthesis\docs\experiments\e0\v061\GPU_REPLAY_EVIDENCE.json

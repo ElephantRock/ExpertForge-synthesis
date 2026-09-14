@@ -2,9 +2,85 @@
 
 **Branch:** `e0/v061-mechanism-bootstrap` | **Head:** see evidence commits below
 
-## Current state: GPU bootstrap COMPLETE (smokes + deterministic replay ALL PASS). All pre-execution gates closed; awaiting authority §17 blocking-matrix audit.
+## Current state: V06-GPU-BOOTSTRAP-REMEDIATION-1 COMPLETE — awaiting authority final §17 audit (incl. r1 decision-program byte-digest recompute) and explicit MECHANISM_SELECTION_EXECUTION_RELEASED.
 
-### V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED — COMPLETE: PASS
+### V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED (r0) — RULED NOT ADMITTED, PRESERVED AS DIAGNOSTIC
+The r0 smokes/replays executed on a firewall weakened post-observation
+(family-ID-only after the both-class gate failed) and under a drifted runtime
+(system Python / transformers 4.50.0 instead of the frozen .venv 5.16.1
+stack). Authority §17 audit ruled items 21/23 NOT ADMITTED, item 20 REOPENED.
+See `incidents/STRUCTSIG_FIREWALL_GATE_WEAKENED_POST_OBSERVATION.md`,
+`incidents/EXECUTION_RUNTIME_SNAPSHOT_DRIFT.md`, and the preserved artifacts
+under `incidents/gpu_bootstrap_r0/` (r0 measurements: t400 5.33/3.62/3.62 min;
+peaks 5.09/3.44/3.32 GiB; replay exact — diagnostic only).
+Conceptual point recorded verbatim: **"duplicate StructSigs are allowed inside
+MSEL" and "a StructSig already burned by MSEL may be reused in a later
+bootstrap fixture" are not equivalent propositions** — the latter was
+explicitly disallowed.
+
+### V06-GPU-BOOTSTRAP-REMEDIATION-1 — COMPLETE: ALL GATES PASS
+1. **Incidents + push** (`293b13f`): both incidents recorded; r0 evidence
+   moved (not rewritten) to `incidents/gpu_bootstrap_r0/` with execution logs;
+   full local chain pushed to the remote branch.
+2. **GPU runtime freeze** (`e136ca7` code, `f23b41a` evidence —
+   `GPU_RUNTIME_FREEZE.json`, ALL 7 GATES PASS): execution runtime = repo
+   `.venv`, **field-identical to the frozen pre-execution snapshot**
+   (Python 3.12.10 / transformers 5.16.1 / tokenizers 0.23.2 /
+   torch 2.14.0+cu126 / driver 616.64 / pip-freeze SHA `ef6d062c…` /
+   igraph `_igraph.pyd` SHA). Prior 5.16.1 record preserved as the frozen
+   snapshot (not reclassified). P0 classification interface exact under this
+   runtime (44,670,976 + 1,539, FP32, finite readout, both arms). Complete
+   **402k P0 tokenizer audit reproduces the prior frozen audit exactly**
+   (min 261 / med 283 / p95 286 / p99 353 / max 358 / max_token_id 49464;
+   truncation 0; invalid 0). Supplementary binding: `sys.executable`,
+   package RECORD SHA-256 for torch/transformers/tokenizers/numpy/scipy/
+   scikit-learn/igraph/psutil, deterministic state QUERIED.
+3. **Structurally fresh r2 fixtures** (`c1feed1`+`551507a` code, `b0f2604`
+   evidence — `SMOKE_REPLAY_CORPORA_R2_EVIDENCE.json`, PASS): rejection
+   sampling against the cumulative burn (MSEL 134,000 families / 28,138 sigs
+   ∪ r0 fixtures 9,200 families / 5,576 sigs). **Both-class overlap = 0**
+   (family IDs AND r3 StructSigs), verified twice — at generation and by an
+   independent second pass over the WRITTEN files. Rejection rates recorded:
+   smoke_r2 8,200 accepted / 42,731 candidates (19.2%; 34,531 sig
+   rejections), replay_r2 1,000 / 6,359 (15.7%). fid rejections 0. Verifier
+   0 errors. Within-fixture multiplicity permitted (production norm);
+   replay additionally avoids smoke signatures (cumulative burn). No
+   relaxations. New burned namespaces: `ExpertForge-E0-v061-smoke-burn-r2`,
+   `ExpertForge-E0-v061-replay-burn-r2` (+`_dev` splits).
+4. **Authoritative smokes + replay under the frozen runtime**
+   (`4e1977e` harness binding — path-only diff, NO recipe changes;
+   evidence bound `4e1977e`):
+   | arm | t400 | projected 8k | peak VRAM | host RSS | gates |
+   |---|---|---|---|---|---|
+   | R16/C0 | 5.24 min | 131.0 min | 5.09 GiB | 1.7 GiB | PASS |
+   | P-FT@R1 | 3.61 min | 90.2 min | 2.57 GiB | 2.1 GiB | PASS |
+   | P-RANDOM@R1 | 3.67 min | 91.6 min | 2.44 GiB | 2.1 GiB | PASS |
+   - r2-corpus P0 token audit: min 265 / med 310 / p95 357 / max 358 ≤ 384; trunc 0; unk 0.
+   - Dev readouts (0.3333 at update 400) are resource/trajectory signals on
+     a burned namespace, NOT capability evidence.
+   - Deterministic model replay (`GPU_REPLAY_EVIDENCE.json`): C0/R and P0
+     paths × 2 separate processes × 3 checkpoints (updates 40/80/120) —
+     **exact match, 0 differences** (bitwise state digests, dev argmax
+     vectors, float32 logits digests, metric scalars). r2 replay reproduces
+     the r0 diagnostic result (also exact) on fresh fixtures under the
+     frozen runtime.
+
+### Remaining before execution release
+1. Authority-side byte-level SHA-256 recompute of the r1 decision-program
+   digest (§17 item 6; program `ab2fb6f6…` is operator-attested)
+2. Authority inspection of the pushed harnesses/evidence
+3. Explicit `MECHANISM_SELECTION_EXECUTION_RELEASED`
+
+## Superseded state: r0 GPU bootstrap (NOT ADMITTED — diagnostic only)
+
+### V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED — r0 execution record (SUPERSEDED)
+
+> SUPERSESSION NOTE: everything below describes the r0 execution, ruled NOT
+> ADMITTED by the authority §17 audit (firewall weakened post-observation;
+> runtime drift). Its "transformers 4.50.0 working-tree reality" claim was the
+> drift symptom — root cause: r0 invoked the system Python instead of the
+> frozen repo `.venv`; the frozen runtime was never absent. Preserved for the
+> incident record; do not cite as §17 evidence.
 - **Code commits (before any GPU execution):** `d4f0fae` (generator + smoke harness + replay harness), `ac23919` (CPU-validation fixes), `877cd41` (compare-evidence digest binding)
 - **Burned fixture corpora** (`SMOKE_REPLAY_CORPORA_EVIDENCE.json`): smoke 8,000 families / 24,000 examples (`ExpertForge-E0-v061-smoke-burn`), replay 800 / 2,400 (`ExpertForge-E0-v061-replay-burn`); family-ID overlap with the 134,000-entry frozen MSEL burn index = **0 both**; verifier errors = 0. StructSig overlap with the burn is descriptive only (5,021 / 499) — skeleton recurrence is intrinsic to the CMDR template space (the burn itself averages ~4.8 families per unique signature).
 - **Resource smokes** (`GPU_SMOKE_EVIDENCE.json`, seed 806915476, bound to `ac23919`):
