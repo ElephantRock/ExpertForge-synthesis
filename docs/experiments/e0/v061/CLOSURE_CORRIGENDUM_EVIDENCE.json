@@ -1,0 +1,160 @@
+{
+  "schema_id": "E0-V061-CLOSURE-CORRIGENDUM-v0",
+  "authority": "V06-PREEXEC-CLOSURE-CORRIGENDUM-1",
+  "code_git_commit": "bda48c48cc40cf81ecd0413d1ae7bacf53a6a4a9",
+  "stream_full_replay": {
+    "cases": 18,
+    "presentations_per_case": 1024000,
+    "results": {
+      "R1|seed_806915476": {
+        "implementation_root": "652ea50299428d9d97404de9eb08c13a69f8f055a157bfb71dc5326991426fc7",
+        "oracle_root": "652ea50299428d9d97404de9eb08c13a69f8f055a157bfb71dc5326991426fc7",
+        "match": true
+      },
+      "R1|seed_1031646469": {
+        "implementation_root": "fbb3e000187c2da17fd78470a43d532756a5fd480af1e5540d117ba2fc0f8efe",
+        "oracle_root": "fbb3e000187c2da17fd78470a43d532756a5fd480af1e5540d117ba2fc0f8efe",
+        "match": true
+      },
+      "R1|seed_128439691": {
+        "implementation_root": "76976a20c1ff7cb7023081066898b9ef20886e506a364f6ce0555a85a604c772",
+        "oracle_root": "76976a20c1ff7cb7023081066898b9ef20886e506a364f6ce0555a85a604c772",
+        "match": true
+      },
+      "R1|seed_555223894": {
+        "implementation_root": "8a579810dee24d92186496a19abaf74a478278e06d15190d22242c5723fa5075",
+        "oracle_root": "8a579810dee24d92186496a19abaf74a478278e06d15190d22242c5723fa5075",
+        "match": true
+      },
+      "R1|seed_454204619": {
+        "implementation_root": "654858139b576c3e5cee1024786a0b7e3e487c45b26d7709b136d69c4c749c9d",
+        "oracle_root": "654858139b576c3e5cee1024786a0b7e3e487c45b26d7709b136d69c4c749c9d",
+        "match": true
+      },
+      "R1|seed_1678768041": {
+        "implementation_root": "6df755050d13ee20c09591e9cf10915a5cfeed233d3b978759cdf9e7f5edb462",
+        "oracle_root": "6df755050d13ee20c09591e9cf10915a5cfeed233d3b978759cdf9e7f5edb462",
+        "match": true
+      },
+      "R4|seed_806915476": {
+        "implementation_root": "d86701915c599e685c94bb82c937765fcb4bc5554ebc2a7dfdf919fcdfa52d50",
+        "oracle_root": "d86701915c599e685c94bb82c937765fcb4bc5554ebc2a7dfdf919fcdfa52d50",
+        "match": true
+      },
+      "R4|seed_1031646469": {
+        "implementation_root": "8602196229d2e638160ae7501fc9bfdb93db2953c19949ea8e130fed49cfe81d",
+        "oracle_root": "8602196229d2e638160ae7501fc9bfdb93db2953c19949ea8e130fed49cfe81d",
+        "match": true
+      },
+      "R4|seed_128439691": {
+        "implementation_root": "379f375c1dfc9a582667602fc8934269d84bcb90775e1520cc360939cddb6421",
+        "oracle_root": "379f375c1dfc9a582667602fc8934269d84bcb90775e1520cc360939cddb6421",
+        "match": true
+      },
+      "R4|seed_555223894": {
+        "implementation_root": "61d0650dd0acddf6535106dbc74595efe2af5b53c3118d730185fff9db9a994e",
+        "oracle_root": "61d0650dd0acddf6535106dbc74595efe2af5b53c3118d730185fff9db9a994e",
+        "match": true
+      },
+      "R4|seed_454204619": {
+        "implementation_root": "1c7196e6be23bd9e71bb0b067a859bf8343833238838f2b882562990725f9ce9",
+        "oracle_root": "1c7196e6be23bd9e71bb0b067a859bf8343833238838f2b882562990725f9ce9",
+        "match": true
+      },
+      "R4|seed_1678768041": {
+        "implementation_root": "71f0a826595c0483ff68c3509bc8e140afa8d8b90a6e41d54c6a24d3d5bfa33f",
+        "oracle_root": "71f0a826595c0483ff68c3509bc8e140afa8d8b90a6e41d54c6a24d3d5bfa33f",
+        "match": true
+      },
+      "R16|seed_806915476": {
+        "implementation_root": "defb2e9ee4347b058b15ad41d964e2bf72218918479334cd3fc652bf2af55fcc",
+        "oracle_root": "defb2e9ee4347b058b15ad41d964e2bf72218918479334cd3fc652bf2af55fcc",
+        "match": true
+      },
+      "R16|seed_1031646469": {
+        "implementation_root": "def5f9823b29aec6cc4095f1e9d1d66f4598e46729f6965f6f0718f9edcc096b",
+        "oracle_root": "def5f9823b29aec6cc4095f1e9d1d66f4598e46729f6965f6f0718f9edcc096b",
+        "match": true
+      },
+      "R16|seed_128439691": {
+        "implementation_root": "1f9971fb7fb1d098a63985c2c110902916890d8fa209d02e7a8c05eadeba798c",
+        "oracle_root": "1f9971fb7fb1d098a63985c2c110902916890d8fa209d02e7a8c05eadeba798c",
+        "match": true
+      },
+      "R16|seed_555223894": {
+        "implementation_root": "e86528adeb75ff6e17ba389a5fce77194e8b9f2b79ef06b96f553fba773a2dc7",
+        "oracle_root": "e86528adeb75ff6e17ba389a5fce77194e8b9f2b79ef06b96f553fba773a2dc7",
+        "match": true
+      },
+      "R16|seed_454204619": {
+        "implementation_root": "ba836f249e34752abcc56bd75b47f5636d7196c36337fb2fcacdd186cc0dfd01",
+        "oracle_root": "ba836f249e34752abcc56bd75b47f5636d7196c36337fb2fcacdd186cc0dfd01",
+        "match": true
+      },
+      "R16|seed_1678768041": {
+        "implementation_root": "4f80f8542bc6184e7f1a6238ca8974115193b851500a418c257c3d752e6bea03",
+        "oracle_root": "4f80f8542bc6184e7f1a6238ca8974115193b851500a418c257c3d752e6bea03",
+        "match": true
+      }
+    },
+    "status": "PASS"
+  },
+  "tokenizer_interface": {
+    "unk_count": 0,
+    "unk_count_required_zero": true,
+    "add_special_tokens": false,
+    "terminal_token": " :",
+    "terminal_is_colon": true,
+    "hidden_dim": 512,
+    "logits_shape": [
+      1,
+      3
+    ],
+    "readout_verified": true,
+    "status": "PASS"
+  },
+  "deterministic_preamble": {
+    "post_application_state": {
+      "cublas_workspace_config": ":4096:8",
+      "are_deterministic_algorithms_enabled": true,
+      "cuda_matmul_allow_tf32": false,
+      "cudnn_allow_tf32": false,
+      "cudnn_deterministic": true,
+      "cudnn_benchmark": false
+    },
+    "verified": true,
+    "status": "PASS"
+  },
+  "superiority_boundary_fixture": {
+    "input": [
+      0.02,
+      0.02,
+      0.02,
+      0.02,
+      0.02,
+      0.02,
+      0.02,
+      0.02,
+      0.02,
+      0.02,
+      0.02,
+      0.02
+    ],
+    "result": {
+      "mean_diff": 0.019999999999999997,
+      "lcb_95": 0.019999999999999993,
+      "superior": false
+    },
+    "expected_superior": false,
+    "actual_superior": false,
+    "status": "PASS"
+  },
+  "all_gates": {
+    "stream_full_replay": "PASS",
+    "tokenizer_interface": "PASS",
+    "deterministic_preamble": "PASS",
+    "superiority_boundary": "PASS"
+  },
+  "overall_status": "PASS",
+  "wall_seconds": 65.4
+}
