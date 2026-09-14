@@ -2,7 +2,15 @@
 
 **Branch:** `e0/v061-mechanism-bootstrap` | **Head:** see release-record commit below
 
-## Current state: V06-EVIDENCE-HARNESS-REMEDIATION-1 COMPLETE — rehearsals schema-valid; authoritative R1 relaunch HELD for authority approval.
+## Current state: FIRST ADMISSIBLE MECHANISM EVIDENCE COMMITTED (R1 × 806915476 attempt-2, `24ae610`) — remaining 35 primary runs HELD for authority batch decision.
+
+### V06-EVIDENCE-HARNESS-CLOSURE-CORRIGENDUM-1 — COMPLETE (all four corrections)
+- `62a42c4` (code-only): immutable roots of trust (manifest `35f3adf3…` / runtime-freeze `eaeffc30…` / P0-verification `16484278…` content-SHA-bound and verified BEFORE reading; model.safetensors == release binding asserted); live-runtime equality gate (fresh pip-freeze SHA + python/torch/CUDA/GPU/cuDNN/transformers/tokenizers/numpy/scipy/sklearn/igraph/driver vs the SHA-verified freeze record, fail closed); P0 artifact digests under `model_identity.artifact_digests` in P reports; full-run wall timer + peak-memory window at cell-execution entry. Scientific recipe untouched.
+- Corrigendum rehearsals (`ba9040d`): R1 + P-FROZEN ALL NEW GATES PASS (schema PASS, live-runtime equality PASS, 23/30 digest gates, 6 P0 artifacts, end-to-end wall populated).
+- **Attempt-2 R1 × 806915476 relaunched under authority pre-authorization** (incident parent `R1|806915476|attempt-1-d09fde1`): **VALID**, full 8,000 updates, evidence committed separately at `24ae610` — clean tree `ba9040d`, code manifest `bd73dce3…`, selection update 400 (earliest on 20-way chance tie; Q = 0.333333 across all components; FEC 0; train-surface SMA 0.333333 / FEC 0 over 24,000 unique examples; wall 5,940.4 s end-to-end, peak 2.533 GiB, presentations exactly 1,024,000 × 146 tokens). Single seed, one cell — no transfer-state interpretation claimed.
+- Remaining 35 primary runs: HELD until the authority inspects this first admissible full report and issues the batch release.
+
+## Superseded: V06-EVIDENCE-HARNESS-REMEDIATION-1 COMPLETE — rehearsals schema-valid; authoritative R1 relaunch HELD for authority approval.
 
 ### V06-EVIDENCE-HARNESS-REMEDIATION-1 (authority remote audit of d09fde1)
 - d09fde1 scientific core (R path) PASSED audit; the frozen-report
