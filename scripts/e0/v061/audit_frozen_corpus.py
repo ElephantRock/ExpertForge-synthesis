@@ -284,11 +284,11 @@ def main() -> None:
             }
         # per-split aggregate
         split_fids = sorted(split_fam_ids[split])
-        split_sigs = sorted(split_sigs[split])
+        split_sig_list = sorted(split_sigs[split])
         identity_roots[f"{split}|aggregate"] = {
             "family_id_root": ordered_root(split_fids),
-            "structsig_root": ordered_root(split_sigs),
-            "unique_structsigs": len(split_sigs),
+            "structsig_root": ordered_root(split_sig_list),
+            "unique_structsigs": len(split_sig_list),
         }
     # exact union count (for corrigendum correction)
     exact_union = len(set().union(*split_sigs.values()))
