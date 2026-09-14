@@ -1,0 +1,22 @@
+{
+  "schema_id": "E0-V061-EVIDENCE-ATTEMPT-RECORD-v0",
+  "authority": "V06-EVIDENCE-HARNESS-REMEDIATION-1 (directive 1)",
+  "cell": "R1",
+  "master_seed": 806915476,
+  "attempt_id": "R1|806915476|attempt-1-d09fde1",
+  "code_git_commit": "d09fde1fbb720f3f13e59212d9c76485f8373366",
+  "run_status": "INVALID_CONTRACT",
+  "reason_codes": [
+    "FROZEN_REPORT_SCHEMA_NONCONFORMANCE",
+    "MISSING_TRAIN_SURFACE_DIAGNOSTICS"
+  ],
+  "reason_detail": "Authority remote audit of d09fde1: report structure does not conform to frozen E0-v0.6.1-MSEL-REPORT-v0 (root field placement, resource nesting, metrics.minimum_label_recall placement); \u00a719 train-surface diagnostics absent and non-reconstructible post-hoc because the selected checkpoint is not persisted after process exit.",
+  "outcome": "STOPPED by authority directive before completion; no scientific metric admitted; dev trajectory not mechanism evidence. Same-seed rerun permitted after contract repair per \u00a710.1 (reporting/executable-contract repair; does not consume a scientifically valid attempt).",
+  "last_completed_checkpoint_evaluation": 3600,
+  "stopped_at_update_between": [
+    3600,
+    8000
+  ],
+  "execution_log_sha256": "7ee3da22870c5ec5e7377264715af7d1755bb20b791bc55143b66693bd96ce45",
+  "launched_from_tree": "clean at d09fde1 (asserted by operator; not captured in-run by d09fde1 harness \u2014 remediated in V06-EVIDENCE-HARNESS-REMEDIATION-1 directive 5)"
+}

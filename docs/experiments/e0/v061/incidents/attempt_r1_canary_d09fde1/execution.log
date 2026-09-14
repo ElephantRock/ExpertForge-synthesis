@@ -1,0 +1,10 @@
+corpus digests verified (16 files); release record verified
+  [R1 seed=806915476] update 400/8000 dev_ID SMA=0.333333 lr=5.000e-04
+  [R1 seed=806915476] update 800/8000 dev_ID SMA=0.333333 lr=4.969e-04
+  [R1 seed=806915476] update 1200/8000 dev_ID SMA=0.333333 lr=4.878e-04
+  [R1 seed=806915476] update 1600/8000 dev_ID SMA=0.333333 lr=4.729e-04
+  [R1 seed=806915476] update 2000/8000 dev_ID SMA=0.333333 lr=4.526e-04
+  [R1 seed=806915476] update 2400/8000 dev_ID SMA=0.333333 lr=4.274e-04
+  [R1 seed=806915476] update 2800/8000 dev_ID SMA=0.333333 lr=3.981e-04
+  [R1 seed=806915476] update 3200/8000 dev_ID SMA=0.333333 lr=3.654e-04
+  [R1 seed=806915476] update 3600/8000 dev_ID SMA=0.333333 lr=3.302e-04
