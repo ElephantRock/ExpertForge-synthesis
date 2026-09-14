@@ -222,7 +222,6 @@ def main() -> None:
     import torch
     runtime_det = {
         "torch_are_deterministic_algorithms_enabled": torch.are_deterministic_algorithms_enabled(),
-        "torch_is_deterministic_debug_mode": torch.is_deterministic_algorithms_enabled(),
         "cuda_matmul_allow_tf32": torch.backends.cuda.matmul.allow_tf32,
         "cudnn_allow_tf32": torch.backends.cudnn.allow_tf32,
         "cudnn_deterministic": torch.backends.cudnn.deterministic,
@@ -230,6 +229,7 @@ def main() -> None:
         "cublas_workspace_config": __import__("os").environ.get("CUBLAS_WORKSPACE_CONFIG"),
         "cuda_version": torch.version.cuda,
         "cudnn_version": torch.backends.cudnn.version(),
+        "note": "scientific paths set are_deterministic_algorithms(True) + TF32 off + cuDNN deterministic before model work; this snapshot records the PROCESS-DEFAULT state before those settings are applied",
     }
     report["runtime_determinism"] = runtime_det
     print(f"  deterministic_algorithms: {runtime_det['torch_are_deterministic_algorithms_enabled']}", flush=True)
