@@ -1,0 +1,102 @@
+{
+  "schema_id": "E0-V061-SMOKE-REPLAY-CORPORA-R2-v0",
+  "authority": "V06-GPU-BOOTSTRAP-REMEDIATION-1",
+  "supersedes": "incidents/gpu_bootstrap_r0/SMOKE_REPLAY_CORPORA_EVIDENCE.json (diagnostic)",
+  "code_git_commit": "f23b41a53fe1a7566f3fd96c96efddeeb7c94dad",
+  "firewall_semantics": {
+    "identity_classes": [
+      "family_id",
+      "r3_structsig_sha256"
+    ],
+    "cumulative_burn": {
+      "msel_families": 134000,
+      "msel_unique_structsigs": 28138,
+      "r0_fixture_families": 9200,
+      "r0_fixture_unique_structsigs": 5576,
+      "total_burn_families": 143200,
+      "total_burn_structsigs": 31031
+    },
+    "within_fixture_multiplicity": "permitted (mirrors production corpus)",
+    "cross_fixture": "replay_r2 additionally avoids smoke_r2 signatures (cumulative burn)",
+    "relaxations": "NONE"
+  },
+  "r0_fixture_identity_recompute": {
+    "r0_smoke_train": {
+      "examples": 24000
+    },
+    "r0_smoke_dev": {
+      "examples": 600
+    },
+    "r0_replay_train": {
+      "examples": 2400
+    },
+    "r0_replay_dev": {
+      "examples": 600
+    },
+    "r0_family_total": 9200,
+    "r0_unique_sig_total": 5576,
+    "r0_sig_recompute_seconds": 7.4
+  },
+  "smoke_corpus_r2": {
+    "candidates_generated": 42731,
+    "accepted_families": 8200,
+    "rejected_family_id_collision": 0,
+    "rejected_structsig_burn": 34531,
+    "verifier_errors": 0,
+    "namespace": "ExpertForge-E0-v061-smoke-burn-r2",
+    "train_families": 8000,
+    "train_examples": 24000,
+    "dev_families": 200,
+    "dev_examples": 600,
+    "train_sha256": "bc26de2dec9413b18e87d82295793b8a6c97f1e6645ee06c15d0b36e8767ce02",
+    "dev_sha256": "1ec7667edf4e03547fbc86477190f76a1a941c1b407810a3f8f97da7ae5b9682",
+    "unique_structsigs_in_fixture": 7560,
+    "fixture_structsig_multiplicity": 1.085,
+    "acceptance_rate": 0.1919,
+    "seconds": 138.0
+  },
+  "replay_corpus_r2": {
+    "candidates_generated": 6359,
+    "accepted_families": 1000,
+    "rejected_family_id_collision": 0,
+    "rejected_structsig_burn": 5359,
+    "verifier_errors": 0,
+    "namespace": "ExpertForge-E0-v061-replay-burn-r2",
+    "train_families": 800,
+    "train_examples": 2400,
+    "dev_families": 200,
+    "dev_examples": 600,
+    "train_sha256": "b14c484961e13003da03c845ffdbf4da885836f37069ebc430968d791e887ad0",
+    "dev_sha256": "1288d39c470809ae5a052be71581966efada50df8c088d5ef3c43b575cb05742",
+    "unique_structsigs_in_fixture": 992,
+    "fixture_structsig_multiplicity": 1.008,
+    "acceptance_rate": 0.1573,
+    "seconds": 21.6
+  },
+  "second_pass_reverification": {
+    "smoke_r2": {
+      "examples": 24600,
+      "families": 8200,
+      "family_id_hits": 0,
+      "structsig_hits": 0,
+      "verifier_errors": 0
+    },
+    "replay_r2": {
+      "examples": 3000,
+      "families": 1000,
+      "family_id_hits": 0,
+      "structsig_hits": 0,
+      "verifier_errors": 0
+    }
+  },
+  "namespaces_burned": [
+    "ExpertForge-E0-v061-smoke-burn-r2",
+    "ExpertForge-E0-v061-replay-burn-r2"
+  ],
+  "gates": {
+    "smoke_r2_both_class_zero": true,
+    "replay_r2_both_class_zero": true
+  },
+  "status": "PASS",
+  "wall_seconds": 188.0
+}
