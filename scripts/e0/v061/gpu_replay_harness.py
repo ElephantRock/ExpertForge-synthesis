@@ -268,12 +268,28 @@ def compare_family(family: str) -> dict:
             diffs.append(f"update {u}: metric {cp1[metric_key]!r} != {cp2[metric_key]!r}")
     if len(run1["checkpoints"]) != len(run2["checkpoints"]):
         diffs.append("checkpoint counts differ")
+    checkpoint_bindings = []
+    for cp1, cp2 in zip(run1["checkpoints"], run2["checkpoints"]):
+        checkpoint_bindings.append({
+            "update": cp1["update"],
+            "state_digest_run1": cp1["state_digest"],
+            "state_digest_run2": cp2["state_digest"],
+            "dev_argmax_sha256_run1": hashlib.sha256(
+                json.dumps(cp1["dev_argmax"]).encode()).hexdigest(),
+            "dev_argmax_sha256_run2": hashlib.sha256(
+                json.dumps(cp2["dev_argmax"]).encode()).hexdigest(),
+            "dev_logits_sha256_run1": cp1["dev_logits_sha256"],
+            "dev_logits_sha256_run2": cp2["dev_logits_sha256"],
+            "metric_run1": cp1[metric_key],
+            "metric_run2": cp2[metric_key],
+        })
     return {
         "family": family,
         "run1_commit": run1["code_git_commit"],
         "run2_commit": run2["code_git_commit"],
         "metric_key": metric_key,
         "checkpoint_updates": run1["checkpoint_updates"],
+        "checkpoint_bindings": checkpoint_bindings,
         "exact_match": not diffs,
         "differences": diffs,
         "run1_wall_seconds": run1["wall_seconds"],
