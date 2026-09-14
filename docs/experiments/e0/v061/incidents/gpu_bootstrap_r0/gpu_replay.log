@@ -1,0 +1,30 @@
+  replay train=2400 dev=600
+    update 40: sma=0.335000 state=fb5cd17d9b4817b0
+    update 80: sma=0.330000 state=770e7a471db93d0b
+    update 120: sma=0.333333 state=a97f6814c7d0b35b
+
+run record: C:\AI\ExpertForge-synthesis\local_data\e0_v061_replay\runs\replay_c0_run1.json
+  replay train=2400 dev=600
+    update 40: sma=0.335000 state=fb5cd17d9b4817b0
+    update 80: sma=0.330000 state=770e7a471db93d0b
+    update 120: sma=0.333333 state=a97f6814c7d0b35b
+
+run record: C:\AI\ExpertForge-synthesis\local_data\e0_v061_replay\runs\replay_c0_run2.json
+C:\Users\xjedd\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0.post1)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+    update 40: acc=0.333333 state=c037f69c6e8fb793
+    update 80: acc=0.333333 state=8da9b5c0b98b7b90
+    update 120: acc=0.333333 state=2a50f2a104665a63
+
+run record: C:\AI\ExpertForge-synthesis\local_data\e0_v061_replay\runs\replay_p0_run1.json
+C:\Users\xjedd\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0.post1)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+    update 40: acc=0.333333 state=c037f69c6e8fb793
+    update 80: acc=0.333333 state=8da9b5c0b98b7b90
+    update 120: acc=0.333333 state=2a50f2a104665a63
+
+run record: C:\AI\ExpertForge-synthesis\local_data\e0_v061_replay\runs\replay_p0_run2.json
+  c0: exact_match=True (0 diffs)
+  p0: exact_match=True (0 diffs)
+
+STATUS: PASS  evidence: C:\AI\ExpertForge-synthesis\docs\experiments\e0\v061\GPU_REPLAY_EVIDENCE.json

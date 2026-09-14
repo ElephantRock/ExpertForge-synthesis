@@ -1,0 +1,16 @@
+=== R16/C0 smoke (400 updates) ===
+  train=24000 dev=600 examples
+    update 400: dev SMA=0.3333 lr=5.000e-04
+  t400=5.33min peak_reserved=5.092GiB gates t400/vram/rss = True/True/True
+=== P-FT@R1 smoke (400 updates) ===
+C:\Users\xjedd\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0.post1)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+  tokens[train] min=263 med=308 p95=357 p99=358 max=358 trunc=0 unk=0
+    update 400: dev acc=0.3333 lr=5.000e-05
+  t400=3.62min peak_reserved=3.441GiB gates t400/vram/rss = True/True/True
+=== P-RANDOM@R1 smoke (400 updates) ===
+  tokens[train] min=263 med=308 p95=357 p99=358 max=358 trunc=0 unk=0
+    update 400: dev acc=0.3333 lr=5.000e-05
+  t400=3.62min peak_reserved=3.32GiB gates t400/vram/rss = True/True/True
+
+STATUS: PASS  evidence: C:\AI\ExpertForge-synthesis\docs\experiments\e0\v061\GPU_SMOKE_EVIDENCE.json

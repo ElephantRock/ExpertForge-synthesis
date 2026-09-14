@@ -1,0 +1,7 @@
+MSEL burn: 134000 families, 28138 unique StructSigs
+=== Generating smoke corpus ===
+  8000 families / 24000 examples | disjoint=False | verr=0
+=== Generating replay corpus ===
+  800 families / 2400 examples | disjoint=False | verr=0
+
+STATUS: FAIL
