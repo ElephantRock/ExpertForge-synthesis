@@ -249,7 +249,7 @@ def verify_frozen_inputs(cell: str, provenance: dict) -> dict:
             key = f"{split}_d{dep}"
             check_file(CORPUS / f"{key}.jsonl", manifest["splits"][key]["sha256"], key)
 
-    check_file(RUNS, RUNGS_SHA, "rungs")
+    check_file(RUNGS, RUNGS_SHA, "rungs")
     check_file(REPORT_SCHEMA, SCHEMA_SHA, "report_schema")
     check_file(HERE / "msel_stream.py", STREAM_SHA, "msel_stream.py")
     check_file(HERE / "msel_metrics.py", METRICS_SHA, "msel_metrics.py")
