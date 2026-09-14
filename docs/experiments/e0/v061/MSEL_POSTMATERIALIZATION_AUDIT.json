@@ -1,0 +1,336 @@
+{
+  "schema_id": "E0-V061-MSEL-POSTMATERIALIZATION-AUDIT-v0",
+  "authority": "V06-MSEL-POSTMATERIALIZATION-AUDIT-1 (read-only; corpus JSONL files never modified)",
+  "code_git_commit": "2810c400ca3c3dd5fd6fc142af1f8a22518b4bd4",
+  "manifest_reference": "25b10b7cdfd2f00d5a201c243fb25fe986123655",
+  "digest_verification": {
+    "all_16_match": true,
+    "details": {
+      "train_pool_d1": {
+        "match": true,
+        "sha256": "4cd24060008a917a6e6bf1967db99224c6a0c8e9eb3f5db592969d96bef24e4f"
+      },
+      "train_pool_d2": {
+        "match": true,
+        "sha256": "9a924cb8b90bf24b9dbe865aaad7f10a9d3f5a9d23409345c97c94e0f2e5ba13"
+      },
+      "train_pool_d3": {
+        "match": true,
+        "sha256": "7013f2c1f75286bb9c1a2d08b20b06f32ea2f49842c59f6bc46a67e1a2431e52"
+      },
+      "train_pool_d4": {
+        "match": true,
+        "sha256": "c02ec682ff7e26391454c462b97f1d9f9cfbea5ab49eae22935dc122055ff4fb"
+      },
+      "dev_ID_d1": {
+        "match": true,
+        "sha256": "882d972f90386b79fcc5c448501858a687e65f848b5e18e293b6d043f6b07bad"
+      },
+      "dev_ID_d2": {
+        "match": true,
+        "sha256": "0920565642be35397db345d8027d1cc464a51186d82cd980df2cc7296e11d6f1"
+      },
+      "dev_ID_d3": {
+        "match": true,
+        "sha256": "f82b54b076cc7273e4b2d47648a976cf53ef93e21902787b3a6b90d6f6278b75"
+      },
+      "dev_ID_d4": {
+        "match": true,
+        "sha256": "4b08fb53ddbcbadaae7e43443cfc22d4fd1ca7bfb37b9254dd327e294792cc18"
+      },
+      "eval_ID_d1": {
+        "match": true,
+        "sha256": "236ddff997e3d498615109d68b1777ff2d14f933e74ce62f482754b4c6db127f"
+      },
+      "eval_ID_d2": {
+        "match": true,
+        "sha256": "4b6fcfb1cc0315511a04b0c429f31f60971c865b02401c3493e270783ff0998e"
+      },
+      "eval_ID_d3": {
+        "match": true,
+        "sha256": "d11b515495f39569055f347cc7b9843feb436c38d3c6e7d93189cc45ae9a4d6b"
+      },
+      "eval_ID_d4": {
+        "match": true,
+        "sha256": "fa568c6f13705b07ad50167a4245df4de7ad03aea3281d96f68086fbf1d9efa6"
+      },
+      "eval_STRUCT_d1": {
+        "match": true,
+        "sha256": "3da8996e1e4586bbf203fe7537f51a5c7084ceffc70b5e03aebe237e0cece05f"
+      },
+      "eval_STRUCT_d2": {
+        "match": true,
+        "sha256": "da9838f287090a31ac8c7abc0ad87661fb6de86a904efebdf8df3e2d3dda4277"
+      },
+      "eval_STRUCT_d3": {
+        "match": true,
+        "sha256": "ed4d43ad94e4a5c4d7d3f3d288e5d508bf1b8017ec69ddda06d35e12bde4ef77"
+      },
+      "eval_STRUCT_d4": {
+        "match": true,
+        "sha256": "34cf8b81257631b72fa01b417b0b35e3ab3b815a1dab36278a08687428ba7f21"
+      }
+    }
+  },
+  "verifier": {
+    "errors": 0,
+    "families_checked": 134000
+  },
+  "family_id_leakage": {
+    "train_pool|dev_ID": 0,
+    "train_pool|eval_ID": 0,
+    "train_pool|eval_STRUCT": 0,
+    "dev_ID|eval_ID": 0,
+    "dev_ID|eval_STRUCT": 0,
+    "eval_ID|eval_STRUCT": 0
+  },
+  "rendered_string_leakage": {
+    "train_pool|dev_ID": 0,
+    "train_pool|eval_ID": 0,
+    "train_pool|eval_STRUCT": 0,
+    "dev_ID|eval_ID": 0,
+    "dev_ID|eval_STRUCT": 0,
+    "eval_ID|eval_STRUCT": 0
+  },
+  "eval_struct_isolation": {
+    "overlap_with_id_splits": 0,
+    "status": "PASS"
+  },
+  "shortcut_audits": {
+    "gate": "Q_shortcut <= 0.38",
+    "scores": {
+      "nuisance|eval_ID": 0.333333,
+      "nuisance|eval_STRUCT": 0.333333,
+      "lexical|eval_ID": 0.333333,
+      "lexical|eval_STRUCT": 0.333333
+    },
+    "api": "macro_cell_accuracy(y, pred, rows) \u2014 corrected invocation",
+    "status": "PASS"
+  },
+  "burn_index": {
+    "path": "local_data\\e0_v061_msel\\MSEL_BURN_INDEX.json",
+    "family_count": 134000,
+    "content_sha256": "5d6dc1755c7a6e4781dde1bae00b372ef435df7a361038f20924a5daa38f3fa0"
+  },
+  "identity_roots": {
+    "train_pool_d1": {
+      "families": 32000,
+      "examples": 96000,
+      "family_id_root": "84ae110fa3eaafee853ffa88fd217771ff82baa5aecf3a0e18e380b9b8d43009",
+      "sample_id_root": "4f17b60b40373656725523052cc160f9f0b12905324fa2f8c5b87240b6bd041c",
+      "render_sha256_root": "2d6d3da9da06d056c9bbd818f81ab960ca053b13ebfe13ed0999032f236b2023",
+      "structsig_root": "3428121d1d111b076efa80f777ee3e60eea9b097d754e7cfb8e8ffc59031dfad",
+      "unique_structsigs": 8521
+    },
+    "train_pool_d2": {
+      "families": 32000,
+      "examples": 96000,
+      "family_id_root": "b0330138585012a3c1dd56408e4f0bd1a9d1486c75af9f8b42addd737f62dd22",
+      "sample_id_root": "eaed2ac974cf3f60c3ee9c3abe08c0c57ca1ced851bb1edeace6099c7050e80b",
+      "render_sha256_root": "f4bbda56d0f61592edbee5fe879ef78da050b6fcdc6f3c9642e9ced2c6ab64d4",
+      "structsig_root": "737ecb8292d015deacab7635f7c4533c70eac0d4ef04eb1568c460031cd0dea6",
+      "unique_structsigs": 7151
+    },
+    "train_pool_d3": {
+      "families": 32000,
+      "examples": 96000,
+      "family_id_root": "b658d04b06977a2f9ed2ef611aa35a0dffa118e861424722eb4dfdd179f6c2e1",
+      "sample_id_root": "e7b8479520ba8b821191c24b89be6bf0085baff3fa5dad941688b6c87f3acbe1",
+      "render_sha256_root": "d0be5c3b7ca55c2594cc0d83d3575c77e2be28b4fb1ed4dd412ecdaceea0d0e6",
+      "structsig_root": "483f4fcbc34a66b67b54dbb311fd8401a0a18573b48328ce97ea78682ab475eb",
+      "unique_structsigs": 5789
+    },
+    "train_pool_d4": {
+      "families": 32000,
+      "examples": 96000,
+      "family_id_root": "1b9e25921a528fd845a1b1071cca87bd44470550d062dd29c8307da07f58bc81",
+      "sample_id_root": "e95acbc25d4cbb88148e9701e0d7d9284d3ca9d13457296e11c4c05223a1bbe0",
+      "render_sha256_root": "7ff5443cfe7fcb45f994da059d7442eb69ee967ea80bfc2b5b1c3cc177a13b30",
+      "structsig_root": "df42909509d662282ccbd9278f754a6df72a2de7fd822e2951f07cffd11396a6",
+      "unique_structsigs": 4581
+    },
+    "train_pool|aggregate": {
+      "family_id_root": "e08bf3219e35b67a66fdc6d0221ea41ce3d4cb922912b701563020a3d46173c9",
+      "structsig_root": "cf5035ba8f76f9f4b41cf24006e23083107ebecd75e5517ce4539225870aadfb",
+      "unique_structsigs": 26042
+    },
+    "dev_ID_d1": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "f807475711041a7f85670490038f75750502404041cb21c8d753f86c0d760a45",
+      "sample_id_root": "461207274f44ea61109d36cfa449b06e9254c2ffc604e69d3199c1c823442f39",
+      "render_sha256_root": "b84a4d968db8d307c740a9648fc62731a7ea0b59848fd08a04a037479654989d",
+      "structsig_root": "f9e195dffb16942474dde65dcbc4ebe860a694bccf560f46129b53ac310aa2bf",
+      "unique_structsigs": 409
+    },
+    "dev_ID_d2": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "64516d71033a4782dc2af7733030cd1b73689973c813bf917b32af3df89ada3b",
+      "sample_id_root": "64735667b65bf60d9633b3287fbaad9edf8a07e9f7cd5aa6d3bea081f47bbc3d",
+      "render_sha256_root": "8e7a12a840e0f19f46c49ea4c0c0bb867af24c7daa72ad0d4203bac8d4bb7acc",
+      "structsig_root": "58d9795b96ce1e343129577b57b850b5335a882fcbcb47dc654fd503aba8c638",
+      "unique_structsigs": 375
+    },
+    "dev_ID_d3": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "93cb1c697fc1b9e386ddb587c5bb910feacfd38cb63bceab74f21f7b6e430cbe",
+      "sample_id_root": "137cb265d5c0910ce1451bd79a85fba30a0061d4fb2a65f84606eca6be4cc32e",
+      "render_sha256_root": "d927591179872387f32b9c140ecea04846dc06f1d5d1718c774e47eaa1d47b1b",
+      "structsig_root": "45176585f772cb7356cb23c27f4c20d82e4c66ebb57e6a66c71a3377c5b432f8",
+      "unique_structsigs": 352
+    },
+    "dev_ID_d4": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "2c7999318ba3f6a5f1fb84d62f84738be20e660d2cfb60e5bc65dd69cbb543ce",
+      "sample_id_root": "caeb10311adb43cf8c1885b6c31bc81501f23f39a7a487eba4a245daa1176b25",
+      "render_sha256_root": "0e8ce502084b130916bcb47afb6b4517e35736fb0f833b2be85b4477d9798411",
+      "structsig_root": "c17dbbd013e9d5047b0ace0f0c6a4633f6a8a2247b0c296f924ff6fd4e5392a4",
+      "unique_structsigs": 309
+    },
+    "dev_ID|aggregate": {
+      "family_id_root": "77314d2ff5eb80b919649aa07062fc296b5baaaee3f6b0ad20666fed33b0c149",
+      "structsig_root": "573692dbc6cfc167f666216f0ec97a8cfc34860aa2ff7131f69c04c3f34a955b",
+      "unique_structsigs": 1445
+    },
+    "eval_ID_d1": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "2989b0464aa9b80f9c6bd7966f726fb535a584a20198cd67ddc9defe5147fe8d",
+      "sample_id_root": "ca11676511edb8378fe5ec22138113ed8542df9b80aff9e64d8cd53afccfdcf3",
+      "render_sha256_root": "29eb99179569f7fe33fc8a4151b6c16838abff1a34720e61034c2dfcc263585f",
+      "structsig_root": "2eb570b9cd982119407c09a910bb8b075d26330c42c8deb1659657b6909d237f",
+      "unique_structsigs": 392
+    },
+    "eval_ID_d2": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "848e9c4a4958e53c719d07809df88e7d63b234032be235f7a75db76bed1ea087",
+      "sample_id_root": "3515e161fe2b9bdb7c518a8dde18c35dafdf1fcc6609742118cc619f5dc98c2e",
+      "render_sha256_root": "989c6c3f7379391f3d8aeff1b50026f9922b0f1afea8a50b3b6f2841c8d0a6d8",
+      "structsig_root": "2e740d3ced4caffd5c4967bdefef4fb93221498bfc892de8ea977e7b50f27b6d",
+      "unique_structsigs": 381
+    },
+    "eval_ID_d3": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "df694dba8d6c7c42d4be0ac1a303da6c99e02187cc2108403247bbe2243e84f2",
+      "sample_id_root": "2fcb92d76202c84d7070baca3272bc57802f6a039edf8ab78eed4bdb3b0164ee",
+      "render_sha256_root": "bdbc917bd7e75d03f0b0529734ba6df8f8b8102653cd8e201a0c609ccdddfe1d",
+      "structsig_root": "7b1eb7ffab70d38bcd2fcd366edfd3000b8c8b7546b0f2128a7c0dd7d49c8946",
+      "unique_structsigs": 343
+    },
+    "eval_ID_d4": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "f3749032393eff927f94e48de129d5639893ae2aff0a4fa3a41a1165d77f52e3",
+      "sample_id_root": "b9755b4e1d776648d16403622a0e7f389b3277fc7212b1a918c20041ba670904",
+      "render_sha256_root": "a919fd524945ca4786818cac88198293dcf8f07ba015551f336b75482ed6b0d9",
+      "structsig_root": "4bfa08ca3f1fe6683d6369d61d20fc683c77d5c1cf975594d54f916e8bca2a15",
+      "unique_structsigs": 324
+    },
+    "eval_ID|aggregate": {
+      "family_id_root": "35fedd17d2131678d94459deb058d64d4fd6d538a89442febac998ef71a3a28d",
+      "structsig_root": "a18dbf57a03dbe94b452c67156c7bfe2ac311b4bc8ee3ca9cbc3d59ca363adb7",
+      "unique_structsigs": 1440
+    },
+    "eval_STRUCT_d1": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "29317cf4d8d218b2fea0d93a908621ed8f2bdd7472940c158a8d9bf8eba8976c",
+      "sample_id_root": "f572853cb5d8d64b849d162d5cecc7f02f710f70e0f516779b27b959e8fd1db3",
+      "render_sha256_root": "1c93ba08327736ff61511c6cca7c35d10472d97844be0d4bf2801816d69eec01",
+      "structsig_root": "f796fa3acb1470bb2cb3b46fed4989c9fae162a95f29985978bf605a88626445",
+      "unique_structsigs": 436
+    },
+    "eval_STRUCT_d2": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "48f9475f32998626acafc92432a48a0ad42ed03011d5ee138d067496d2cc0a82",
+      "sample_id_root": "b00c3bba11ad34a8db848358cbbc7357eda3c5ab7f507e9ae82a5ff1cb74fcec",
+      "render_sha256_root": "c4b7a6dce3542db33d3c237a00b36458678a674ecba11bc0023b2f736804e8b8",
+      "structsig_root": "1aaaa5964bcd4ef440835322c4318833209097b89d36b1d4d29fbd623ae19b86",
+      "unique_structsigs": 395
+    },
+    "eval_STRUCT_d3": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "ddc7bcdf05c8e5b67cca8243ef7e45ded1a9e2a7d23885471d5282f9e0fa639a",
+      "sample_id_root": "5b88cb7dce62b5db3be56b3e1fcbd8e79b113e4e5a07edb5c2d7edf54271af89",
+      "render_sha256_root": "f4e91c156cb6f6597fe5632b468aa2c36641edb241164c9d38edb302f48ce501",
+      "structsig_root": "6ecdec6cedbeb9fdf2ede17c595fef1d24600ddafaf11db0497690f0648b75b3",
+      "unique_structsigs": 373
+    },
+    "eval_STRUCT_d4": {
+      "families": 500,
+      "examples": 1500,
+      "family_id_root": "8d26c09b1d9f695a00b1ab3bedbaeccc43e21d15cacdd64b178e0375ec126d80",
+      "sample_id_root": "3156f6e93fe5985c82ac045d79635edb8b8fade0db3f54b6b5feff87785d41b1",
+      "render_sha256_root": "0f233f0fb0dfcc5bcf558fcc426edd383c3d8230a5f6e40581384cf109bb2fb3",
+      "structsig_root": "1440fbf03547689ec2aee26d8576f590cc08969b01835461af7f57f9690f4580",
+      "unique_structsigs": 328
+    },
+    "eval_STRUCT|aggregate": {
+      "family_id_root": "b06a5f7bf320b27808c5e06de8cd44edf82202a99f3d1848d2372bf8ec571ff0",
+      "structsig_root": "ad10a83cfaba228e6ec89a668faccfb80d6c5f52b83e7d716571d1635e18df6e",
+      "unique_structsigs": 1532
+    },
+    "exact_union": {
+      "total_unique_structsigs_across_all_splits": 28138,
+      "note": "exact authoritative union count; replaces the corrigendum's approximate per-split-unique sums"
+    }
+  },
+  "rungs": {
+    "path": "local_data\\e0_v061_msel\\MSEL_RUNGS.json",
+    "sha256": "e83e6849e5e0db189e24df354c8d5ca8ade69de07a222cd126946ae07858db74",
+    "per_depth": {
+      "d1": {
+        "R1_family_ids_root": "674e9730bbca7fe88812ea14ca70e8eca204b8e13348d42da1649487ec549e3b",
+        "R4_family_ids_root": "842471e05366d68ef60f6483f0476fac3445037ac7f7665dd784068946c953d8",
+        "R16_family_ids_root": "84ae110fa3eaafee853ffa88fd217771ff82baa5aecf3a0e18e380b9b8d43009",
+        "R1_count": 2000,
+        "R4_count": 8000,
+        "R16_count": 32000,
+        "R1_subset_R4": true,
+        "R4_subset_R16": true
+      },
+      "d2": {
+        "R1_family_ids_root": "5b661cfd70271bbb0eacdc4c067330146b380307643b6339812bf9de09858da3",
+        "R4_family_ids_root": "491b0539d1d5a7768c89b364d13b5eb9ed534d6027d7c346d89e9c4d9f7d602f",
+        "R16_family_ids_root": "b0330138585012a3c1dd56408e4f0bd1a9d1486c75af9f8b42addd737f62dd22",
+        "R1_count": 2000,
+        "R4_count": 8000,
+        "R16_count": 32000,
+        "R1_subset_R4": true,
+        "R4_subset_R16": true
+      },
+      "d3": {
+        "R1_family_ids_root": "4d7a9f054d85cce6c7f808f0b42169d2b0406367d35edd2454a428c1bc2d64b4",
+        "R4_family_ids_root": "270dddbee45484473bcb359c1d46cdd78aa31d3198b0bc96341a4af021370d8e",
+        "R16_family_ids_root": "b658d04b06977a2f9ed2ef611aa35a0dffa118e861424722eb4dfdd179f6c2e1",
+        "R1_count": 2000,
+        "R4_count": 8000,
+        "R16_count": 32000,
+        "R1_subset_R4": true,
+        "R4_subset_R16": true
+      },
+      "d4": {
+        "R1_family_ids_root": "a56daee451bf2ed15806b279d4c72e7ddf741adf8e387b3207516a52763d9f56",
+        "R4_family_ids_root": "4cccc3d509282bddbc54ef7a35f3f86c9ad4a7a58bd3f407a48d56bc3a7090b0",
+        "R16_family_ids_root": "1b9e25921a528fd845a1b1071cca87bd44470550d062dd29c8307da07f58bc81",
+        "R1_count": 2000,
+        "R4_count": 8000,
+        "R16_count": 32000,
+        "R1_subset_R4": true,
+        "R4_subset_R16": true
+      }
+    }
+  },
+  "total_examples": 402000,
+  "total_families": 134000,
+  "errors": [],
+  "status": "PASS",
+  "wall_seconds": 295.3
+}
