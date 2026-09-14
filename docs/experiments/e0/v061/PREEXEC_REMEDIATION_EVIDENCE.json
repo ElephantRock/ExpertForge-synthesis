@@ -1,0 +1,242 @@
+{
+  "schema_id": "E0-V061-PREEXEC-REMEDIATION-EVIDENCE-v0",
+  "authority": "V06-PREEXEC-REMEDIATION-1",
+  "code_git_commit": "1d398edcf1fccf4184d0033eabb25438ee08fb5a",
+  "supersedes": "95841d0a9a6e2de57d8cda696b73e5bbd12fddc5 (PARTIAL PASS)",
+  "example_stream": {
+    "R1|d1": {
+      "families": 2000,
+      "samples": 6000,
+      "expected_samples": 6000,
+      "count_match": true,
+      "cycle0_root": "8d5376ede74c1843904b8084dd38d015c26247cad4c311262f91e237dbd13cfd",
+      "cycle0_is_permutation": true,
+      "oracle_impl_match": true
+    },
+    "R1|d2": {
+      "families": 2000,
+      "samples": 6000,
+      "expected_samples": 6000,
+      "count_match": true
+    },
+    "R1|d3": {
+      "families": 2000,
+      "samples": 6000,
+      "expected_samples": 6000,
+      "count_match": true
+    },
+    "R1|d4": {
+      "families": 2000,
+      "samples": 6000,
+      "expected_samples": 6000,
+      "count_match": true
+    },
+    "R4|d1": {
+      "families": 8000,
+      "samples": 24000,
+      "expected_samples": 24000,
+      "count_match": true
+    },
+    "R4|d2": {
+      "families": 8000,
+      "samples": 24000,
+      "expected_samples": 24000,
+      "count_match": true
+    },
+    "R4|d3": {
+      "families": 8000,
+      "samples": 24000,
+      "expected_samples": 24000,
+      "count_match": true
+    },
+    "R4|d4": {
+      "families": 8000,
+      "samples": 24000,
+      "expected_samples": 24000,
+      "count_match": true
+    },
+    "R16|d1": {
+      "families": 32000,
+      "samples": 96000,
+      "expected_samples": 96000,
+      "count_match": true
+    },
+    "R16|d2": {
+      "families": 32000,
+      "samples": 96000,
+      "expected_samples": 96000,
+      "count_match": true
+    },
+    "R16|d3": {
+      "families": 32000,
+      "samples": 96000,
+      "expected_samples": 96000,
+      "count_match": true
+    },
+    "R16|d4": {
+      "families": 32000,
+      "samples": 96000,
+      "expected_samples": 96000,
+      "count_match": true
+    },
+    "R1|presentation_budget": {
+      "samples": 24000,
+      "full_cycles": 42,
+      "remainder": 16000,
+      "total": 1024000,
+      "equals_budget": true
+    },
+    "R4|presentation_budget": {
+      "samples": 96000,
+      "full_cycles": 10,
+      "remainder": 64000,
+      "total": 1024000,
+      "equals_budget": true
+    },
+    "R16|presentation_budget": {
+      "samples": 384000,
+      "full_cycles": 2,
+      "remainder": 256000,
+      "total": 1024000,
+      "equals_budget": true
+    }
+  },
+  "tokenizer_audit": {
+    "P0_native": {
+      "examples": 402000,
+      "token_length_min": 261,
+      "token_length_median": 283,
+      "token_length_p95": 286,
+      "token_length_p99": 353,
+      "token_length_max": 358,
+      "max_token_id": 49464,
+      "all_ids_below_50304": true,
+      "truncation_count": 0,
+      "invalid_or_unknown_count": 0
+    },
+    "CMDR_Lex_v1": {
+      "examples": 402000,
+      "token_length_min": 146,
+      "token_length_median": 146,
+      "token_length_p95": 146,
+      "token_length_p99": 194,
+      "token_length_max": 194,
+      "all_below_384": true
+    },
+    "status": "PASS"
+  },
+  "frozen_verifier": {
+    "families": 134000,
+    "verify_family_errors": 0,
+    "counterfactual_invariance_errors": 0,
+    "status": "PASS"
+  },
+  "seeds_substreams": {
+    "seeds": {
+      "primary": [
+        806915476,
+        1031646469,
+        128439691,
+        555223894,
+        454204619,
+        1678768041
+      ],
+      "comparison_only": [
+        1228139313,
+        1536284461,
+        293488859,
+        1941939586,
+        1046059599,
+        920620107
+      ],
+      "bootstrap": 1611111118
+    },
+    "seeds_verified": true,
+    "substream_count": 48,
+    "substreams": {
+      "806915476|backbone_init": 266238500,
+      "806915476|classifier_init": 5726939,
+      "806915476|data_order": 1110695042,
+      "806915476|dataloader_workers": 119232162,
+      "1031646469|backbone_init": 1266262379,
+      "1031646469|classifier_init": 1980903240,
+      "1031646469|data_order": 1887507960,
+      "1031646469|dataloader_workers": 830185402,
+      "128439691|backbone_init": 2112275308,
+      "128439691|classifier_init": 870244359,
+      "128439691|data_order": 1090220044,
+      "128439691|dataloader_workers": 101856112,
+      "555223894|backbone_init": 471216687,
+      "555223894|classifier_init": 837164250,
+      "555223894|data_order": 340618777,
+      "555223894|dataloader_workers": 206064910,
+      "454204619|backbone_init": 316852519,
+      "454204619|classifier_init": 1477390500,
+      "454204619|data_order": 1050643080,
+      "454204619|dataloader_workers": 1187442679,
+      "1678768041|backbone_init": 661831147,
+      "1678768041|classifier_init": 792563227,
+      "1678768041|data_order": 128080211,
+      "1678768041|dataloader_workers": 1345253955,
+      "1228139313|backbone_init": 1496240868,
+      "1228139313|classifier_init": 139322479,
+      "1228139313|data_order": 438012077,
+      "1228139313|dataloader_workers": 1416250781,
+      "1536284461|backbone_init": 1056252378,
+      "1536284461|classifier_init": 1522253528,
+      "1536284461|data_order": 1436712835,
+      "1536284461|dataloader_workers": 1509853434,
+      "293488859|backbone_init": 412888800,
+      "293488859|classifier_init": 666969960,
+      "293488859|data_order": 2094387314,
+      "293488859|dataloader_workers": 1604929138,
+      "1941939586|backbone_init": 432251035,
+      "1941939586|classifier_init": 2134018652,
+      "1941939586|data_order": 184774440,
+      "1941939586|dataloader_workers": 1607606878,
+      "1046059599|backbone_init": 385533677,
+      "1046059599|classifier_init": 1149816324,
+      "1046059599|data_order": 765802136,
+      "1046059599|dataloader_workers": 1276157947,
+      "920620107|backbone_init": 1298137225,
+      "920620107|classifier_init": 933134360,
+      "920620107|data_order": 592463795,
+      "920620107|dataloader_workers": 304101009
+    },
+    "status": "PASS"
+  },
+  "runtime_snapshot": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python_version": "3.12.10",
+    "python_implementation": "cpython",
+    "igraph_version": "1.0.0",
+    "igraph_py_sha256": "92d9e9e773313320417c0e9193d04f3e94b948833b4e6c34e46c7f53d122441f",
+    "torch_version": "2.14.0+cu126",
+    "cuda_available": true,
+    "cuda_version": "12.6",
+    "gpu_name": "NVIDIA GeForce RTX 3080 Ti",
+    "gpu_memory_bytes": 12884246528,
+    "bf16_supported": true,
+    "cudnn_version": 91002,
+    "cudnn_enabled": true,
+    "deterministic_algorithms": true,
+    "tf32_matmul_disabled": true,
+    "tf32_cudnn_disabled": true,
+    "nvidia_driver": "616.64",
+    "transformers_version": "5.16.1",
+    "numpy_version": "2.3.5",
+    "scipy_version": "1.18.1",
+    "sklearn_version": "1.8.0",
+    "tokenizers_version": "0.23.2",
+    "pip_freeze_text": "accelerate==1.14.0\nannotated-doc==0.0.5\nanyio==4.15.1\ncertifi==2026.7.22\nclick==8.5.0\ncloudpickle==3.1.2\ncolorama==0.4.6\nfilelock==3.32.3\nfsspec==2026.7.0\nh11==0.16.0\nhf-xet==1.6.0\nhttpcore==1.0.9\nhttpx==0.28.1\nhuggingface_hub==1.30.0\nidna==3.19\nigraph==1.0.0\nJinja2==3.1.6\njoblib==1.6.0\nmarkdown-it-py==4.2.0\nMarkupSafe==3.0.3\nmdurl==0.1.2\nmpmath==1.3.0\nnetworkx==3.6.1\nnumpy==2.3.5\npackaging==26.3\npsutil==7.2.2\nPygments==2.21.0\nPyYAML==6.0.3\nregex==2026.9.3\nrich==15.0.0\nsafetensors==0.8.0\nscikit-learn==1.8.0\nscipy==1.18.1\nsetuptools==78.1.0\nshellingham==1.5.4\nsympy==1.14.0\ntexttable==1.7.0\nthreadpoolctl==3.6.0\ntokenizers==0.23.2\ntorch==2.14.0+cu126\ntqdm==4.70.0\ntransformers==5.16.1\ntyper==0.27.2\ntyping_extensions==4.16.0\n",
+    "pip_freeze_sha256": "ef6d062c81daf54a4a7a98aca1d2f4204476433e299c345d893a2f4bf0627011"
+  },
+  "all_gates": {
+    "example_stream": "PASS",
+    "tokenizer_audit": "PASS",
+    "frozen_verifier": "PASS",
+    "seeds_substreams": "PASS"
+  },
+  "overall_status": "PASS",
+  "wall_seconds": 329.1
+}
