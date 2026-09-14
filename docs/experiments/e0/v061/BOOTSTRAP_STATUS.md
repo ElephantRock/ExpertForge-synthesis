@@ -2,7 +2,36 @@
 
 **Branch:** `e0/v061-mechanism-bootstrap` | **Head:** see release-record commit below
 
-## Current state: MECHANISM_SELECTION_EXECUTION_RELEASED — §17 ALL 24 ITEMS PASS. Mechanism-selection evidence execution authorized; production harness work begins.
+## Current state: V06-EVIDENCE-HARNESS-REMEDIATION-1 COMPLETE — rehearsals schema-valid; authoritative R1 relaunch HELD for authority approval.
+
+### V06-EVIDENCE-HARNESS-REMEDIATION-1 (authority remote audit of d09fde1)
+- d09fde1 scientific core (R path) PASSED audit; the frozen-report
+  implementation FAILED it. Live R1 canary stopped at update 3600/8000,
+  preserved as `incidents/attempt_r1_canary_d09fde1/` with
+  `run_status = INVALID_CONTRACT` (reason codes
+  `FROZEN_REPORT_SCHEMA_NONCONFORMANCE`,
+  `MISSING_TRAIN_SURFACE_DIAGNOSTICS`); no scientific metric admitted;
+  same-seed rerun permitted per §10.1.
+- Remediation commits (code-only): `d9272b1` (frozen-schema literal report
+  with fail-closed validator; §9.6 train-surface diagnostics over unique
+  training membership under `metrics.train_surface`; mode-preserving
+  predictions + P-FROZEN frozen-backbone assertions around every checkpoint
+  evaluation; startup provenance — exact starting commit with REQUIRED
+  clean tracked tree, canonical `code_sha256` manifest over 8 scientific
+  files, hard byte-verification of rungs/schema/stream/metrics/runtime
+  pip-freeze/release/16 splits/P0 files; deterministic state verified
+  before model construction; resource telemetry finalized after ALL
+  mandatory evaluations; `estimated_flops: null`; §10.1-zero divergence
+  records also schema-conformant), plus typo fixes `3c98f61`/`9396632`.
+- Rehearsal artifacts (diagnostic-only, schema-valid, committed `62ff052`):
+  `rehearsals/R1_seed806915476_rehearsal.json`,
+  `rehearsals/P-FROZEN_seed806915476_rehearsal.json` — both from clean tree
+  `9396632` (code manifest `a9bfb10b…`), validator passed at write time and
+  re-verified independently on the written files.
+- HELD: authoritative R1 rerun + remaining 35 primary runs, pending authority
+  approval of the remediated harness.
+
+## Superseded: MECHANISM_SELECTION_EXECUTION_RELEASED — first-launch state (d09fde1)
 
 ### Release record (bound in-repo)
 - `E0_v0.6.1_MECHANISM_SELECTION_EXECUTION_RELEASE.json` + `.sha256` sidecar —
