@@ -155,7 +155,7 @@ def main() -> None:
         "r1_sha256_recomputed": r1_sha,
         "r1_sha256_matches": r1_sha == expected_r1,
         "oracle_exit": oracle.returncode,
-        "oracle_output": json.loads(oracle.stdout.strip()) if oracle.returncode == 0 else None,
+        "oracle_output_raw": oracle.stdout.strip()[:300],
         "schema_sha256_recomputed": schema_sha,
         "schema_sha256_matches": schema_sha == expected_schema,
         "status": "PASS" if r1_sha == expected_r1 and oracle.returncode == 0 and schema_sha == expected_schema else "FAIL",
