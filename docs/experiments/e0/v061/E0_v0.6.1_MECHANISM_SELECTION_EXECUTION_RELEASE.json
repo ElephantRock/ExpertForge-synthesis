@@ -1,0 +1,86 @@
+{
+  "action": "MECHANISM_SELECTION_EXECUTION_RELEASED",
+  "audited_head": "6435a8dc6e933b60ae25d16c221588c3d17aabeb",
+  "authorized_execution": {
+    "comparison_only_seeds": "execute only for trainable regimes already TRANSFER_PASS on primary seeds, iff at least two trainable regimes are eligible",
+    "conditional_cells": {
+      "P-FT@R16": "execute iff R1,R4,R16,P-RANDOM@R1,P-FT@R1 are all NO_TRANSFER",
+      "P-RANDOM-FROZEN": "execute iff P-FROZEN = TRANSFER_PASS"
+    },
+    "primary_cells": [
+      "R1",
+      "R4",
+      "R16",
+      "P-FROZEN",
+      "P-RANDOM@R1",
+      "P-FT@R1"
+    ],
+    "primary_seeds": [
+      806915476,
+      1031646469,
+      128439691,
+      555223894,
+      454204619,
+      1678768041
+    ]
+  },
+  "bindings": {
+    "contract_sha256": "a70a910e2781fe5c37d625f5474032efaba32855d16446412eb590d55caf7e5b",
+    "decision_program_sha256_authority_recomputed": "ab2fb6f69948f50aa44a1ae0b53a9f6949084ca9f30f4be7fc388c5a8d1efb54",
+    "metric_implementation_sha256": "dde9e4e9bae2237dcef45568d325e6bccd4c66d2845a43da33ed17143c4c4118",
+    "p0_weights_sha256": "ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15",
+    "runtime_pip_freeze_sha256": "ef6d062c81daf54a4a7a98aca1d2f4204476433e299c345d893a2f4bf0627011",
+    "spec_bound_addendum_sha256": "eecccdc3b6cb1e818d5084323c3101e5ce441bd9669ba97e0d91d74a038a950b"
+  },
+  "branch": "e0/v061-mechanism-bootstrap",
+  "contract_version": "v0.6.1-candidate",
+  "execution_constraints": {
+    "corpus": "frozen CMDR-MSEL-v0 only; split/rung identities and digests immutable",
+    "decision": "frozen r1 decision program only",
+    "metrics": "frozen Section 9 implementation only",
+    "no_result_driven_retuning": true,
+    "production_training_stream": "MSEL-ExampleStream-v1 with the master seed exactly as frozen; bootstrap TrainStream use is not production authority",
+    "runtime": "repo .venv frozen runtime from GPU_RUNTIME_FREEZE.json; no interpreter/package substitution"
+  },
+  "experiment_id": "E0",
+  "incident_lineage": {
+    "documentation_note": "incident files may be marked RESOLVED in the repository release-record commit; no scientific rerun required",
+    "gpu_bootstrap_r0": "diagnostic only / superseded",
+    "gpu_bootstrap_r2": "authoritative bootstrap evidence"
+  },
+  "issued_at": "2026-09-14T21:15:00+03:00",
+  "repository": "ElephantRock/ExpertForge-synthesis",
+  "schema_id": "E0-V061-MECHANISM-SELECTION-EXECUTION-RELEASE-v1",
+  "section_17": {
+    "decision_program_self_test": {
+      "assignments_checked": 245,
+      "outcome_counts": {
+        "INCONCLUSIVE": 32,
+        "IN_DOMAIN_ALLOCATION_VIABLE": 32,
+        "MULTIPLE_VIABLE": 131,
+        "NEITHER_SUFFICIENT": 1,
+        "P0_RANDOM_VIABLE": 16,
+        "PRETRAINED_VIABLE": 17,
+        "RANDOM_BASE_VIABLE": 16
+      },
+      "regression_case": "PASS"
+    },
+    "item_24": "ISSUED_BY_THIS_RECORD",
+    "items_1_through_23": "PASS",
+    "model_replay_authority_selection_check": {
+      "C0_R_path_selected_checkpoint": 40,
+      "P0_trainable_path_selected_checkpoint": 40,
+      "reason": "argmax replay dev metric with earliest-update tie break; selected-checkpoint predictions/metrics/state digests match across replay runs"
+    }
+  },
+  "still_held": [
+    "v0.6 student qualification",
+    "source/headroom qualification",
+    "Q3",
+    "final E0 corpus",
+    "A0",
+    "adapter evidence",
+    "architecture experiments",
+    "Engram/HCM"
+  ]
+}

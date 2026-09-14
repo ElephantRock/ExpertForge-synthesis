@@ -3,7 +3,7 @@
 **Severity:** §17-blocking (item 20 reopened)
 **Discovered by:** project authority, final §17 audit of V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED
 **Remediation authority:** V06-GPU-BOOTSTRAP-REMEDIATION-1
-**Status:** OPEN — remediation in flight
+**Status:** RESOLVED — superseded by r2 authoritative evidence; execution runtime re-frozen as the original frozen `.venv` (`GPU_RUNTIME_FREEZE.json`, all 7 gates PASS, `f23b41a`); §17 item 20 PASS at audited head `6435a8d`; release issued (`90365137…`)
 
 ## What happened
 

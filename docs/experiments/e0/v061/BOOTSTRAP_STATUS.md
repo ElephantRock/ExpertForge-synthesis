@@ -1,8 +1,43 @@
 # E0 v0.6.1 Mechanism Bootstrap — Lane Status
 
-**Branch:** `e0/v061-mechanism-bootstrap` | **Head:** see evidence commits below
+**Branch:** `e0/v061-mechanism-bootstrap` | **Head:** see release-record commit below
 
-## Current state: V06-GPU-BOOTSTRAP-REMEDIATION-1 COMPLETE — awaiting authority final §17 audit (incl. r1 decision-program byte-digest recompute) and explicit MECHANISM_SELECTION_EXECUTION_RELEASED.
+## Current state: MECHANISM_SELECTION_EXECUTION_RELEASED — §17 ALL 24 ITEMS PASS. Mechanism-selection evidence execution authorized; production harness work begins.
+
+### Release record (bound in-repo)
+- `E0_v0.6.1_MECHANISM_SELECTION_EXECUTION_RELEASE.json` + `.sha256` sidecar —
+  SHA-256 `90365137f372b001324b2811d59f9277915dc7b64891e1f8a6620d176d6a07b8`
+  (verified against the authority-issued artifact byte-for-byte), audited head
+  `6435a8dc…`, issued 2026-09-14T21:15+03:00.
+- §17 item 6 closed authority-side: decision-program SHA independently
+  recomputed `ab2fb6f6…` from GitHub blob bytes; program executed — 245
+  assignments, counts `131/16/32/16/17/1/32`, P-RANDOM regression PASS.
+- Replay checkpoint selection independently resolved by authority: C0 selects
+  update 40 (0.336666… argmax), P0 selects update 40 (three-way tie at
+  0.333333…, earliest-update tie-break) — agrees exactly across replay runs.
+- Both remediation incidents marked **RESOLVED / superseded by r2
+  authoritative evidence**.
+
+### Execution constraints recorded from the release (binding on all evidence runs)
+1. Primary cells NOW executable: `R1`, `R4`, `R16`, `P-FROZEN`,
+   `P-RANDOM@R1`, `P-FT@R1` × six primary seeds.
+   Conditional: `P-RANDOM-FROZEN` iff P-FROZEN TRANSFER_PASS; `P-FT@R16` iff
+   R1/R4/R16/P-RANDOM@R1/P-FT@R1 all NO_TRANSFER; comparison-only seeds iff
+   ≥2 trainable regimes TRANSFER_PASS.
+2. **Production training stream = MSEL-ExampleStream-v1 with the master seed
+   exactly as frozen.** Bootstrap `TrainStream` / `data_order`-substream use
+   is accepted ONLY for the §17 resource/determinism bootstrap — NOT
+   authority for mechanism evidence.
+3. Full §14/§19 telemetry on every authoritative run (incl. non-padding token
+   presentations and forward-token count); smoke JSON is not the scientific
+   reporting template.
+4. Runtime: repo `.venv` frozen runtime (`GPU_RUNTIME_FREEZE.json`); corpus:
+   frozen CMDR-MSEL-v0 only; metrics: frozen §9 implementation; decision:
+   frozen r1 program. No result-driven retuning.
+5. STILL HELD: student qualification, source/headroom, Q3, final E0 corpus,
+   A0, adapter evidence, architecture experiments, Engram/HCM.
+
+## Superseded state: V06-GPU-BOOTSTRAP-REMEDIATION-1 COMPLETE — awaiting authority final §17 audit
 
 ### V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED (r0) — RULED NOT ADMITTED, PRESERVED AS DIAGNOSTIC
 The r0 smokes/replays executed on a firewall weakened post-observation

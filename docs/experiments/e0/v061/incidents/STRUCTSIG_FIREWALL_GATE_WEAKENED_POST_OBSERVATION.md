@@ -3,7 +3,7 @@
 **Severity:** §17-blocking (items 21 and 23 not admitted)
 **Discovered by:** project authority, final §17 audit of V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED
 **Remediation authority:** V06-GPU-BOOTSTRAP-REMEDIATION-1
-**Status:** OPEN — remediation in flight
+**Status:** RESOLVED — superseded by r2 authoritative evidence (`b0f2604`, `4e1977e`, `6435a8d`); §17 items 20/21/23 PASS at audited head; release issued (`E0_v0.6.1_MECHANISM_SELECTION_EXECUTION_RELEASE.json`, SHA-256 `90365137…`)
 
 ## What happened
 
