@@ -1,40 +1,34 @@
 """E0 v0.6.1 mechanism-selection evidence harness (MECHANISM_SELECTION_EXECUTION_RELEASED).
 
-One invocation = one arm/cell × one master seed × the full frozen recipe.
+REMEDIATED under V06-EVIDENCE-HARNESS-REMEDIATION-1:
+  - emits the frozen E0-v0.6.1-MSEL-REPORT-v0 schema literally, validated
+    against the frozen schema file before writing (fail closed);
+  - selected-checkpoint train-surface diagnostics (§9.6/§19) over the unique
+    frozen training membership (single-surface SMA / depth-2:4 / per-depth /
+    per-label recalls / family exact consistency under metrics.train_surface);
+  - predict_r/predict_p preserve caller module modes; P-FROZEN asserts the
+    frozen backbone stays eval() (training == False) around every checkpoint
+    evaluation;
+  - startup provenance: exact starting commit captured with a REQUIRED clean
+    tracked worktree; hard byte-level verification of rung artifact, report
+    schema, stream implementation, metric implementation, runtime snapshot
+    (pip-freeze binding), release record, 16 corpus splits, and P0 snapshot
+    files for P cells; deterministic state verified BEFORE model construction;
+  - code_sha256 = canonical executable-code manifest over the harness and the
+    imported scientific implementation files (component hashes preserved);
+  - wall/peak/RSS/token telemetry finalized only after eval_ID, eval_STRUCT,
+    and train-surface diagnostics complete; estimated_flops: null.
 
-Cells: R1 | R4 | R16 | P-FROZEN | P-FT (P-FT@R1) | P-RANDOM (P-RANDOM@R1)
-Conditional cells (P-RANDOM-FROZEN, P-FT@R16) are NOT runnable here; they
-require authority-verified trigger states.
-
-Frozen execution contract (v0.6.1 candidate + release record 90365137…):
-  - Training stream: MSEL-ExampleStream-v1 with the MASTER SEED exactly as
-    frozen (§5.3). The v0.5 TrainStream and the data_order substream are
-    bootstrap-only and are NOT used here.
-  - Corpus: frozen CMDR-MSEL-v0; split digests hard-verified against
-    MSEL_MANIFEST.json at startup; rung membership from MSEL_RUNGS.json.
-  - R arms (§5): exact v0.5 C0, AdamW β=(0.9,0.95) ε=1e-8 peak 5e-4, WD 0.05
-    exclude_norm_bias, clip 1.0, warmup 400 → cosine to 10% at 8000,
-    microbatch 16 × accumulation 8 = 128, 8,000 updates, 1,024,000
-    presentations, FP32, no early stopping.
-  - P-FT/P-RANDOM (§6.6/6.7): P0 backbone (44,670,976) + 512→3 bias
-    classifier (1,539), native tokenizer, AdamW peak 5e-5, WD 0.01
-    matrix-only, same schedule/batching.
-  - P-FROZEN (§6.4): pretrained backbone FROZEN; classifier-only AdamW
-    lr 1e-3 constant, WD 0, β=(0.9,0.95) ε=1e-8, clip 1.0; same stream,
-    batching, checkpoint cadence.
-  - RNG substreams (§8.3) govern backbone_init / classifier_init; the DATA
-    stream uses the master seed via MSEL-ExampleStream-v1.
-  - Checkpoint candidates every 400 updates; selection = dev_ID CMDR-SMA
-    strictly-greater (earliest-update tie-break); eval_ID/eval_STRUCT never
-    influence selection; no early termination.
-  - Run status per §10.1; divergence fails closed (DIVERGED_SCIENTIFIC).
-  - Full §19 telemetry per run.
+Scientific core unchanged from the audited d09fde1 (combined all-depth
+master-seed MSEL-ExampleStream-v1; dev_ID-only selection at 400-update
+cadence with strict-greater/earliest tie-break; selected-state restore before
+final scoring; §6.4/6.6/6.7 recipes; §10.1 statuses; fail-closed divergence).
 
 Usage (MUST run under the frozen .venv):
   .venv/Scripts/python.exe scripts/e0/v061/mechanism_evidence_harness.py \
-      --cell R1 --seed 806915476
+      --cell R1 --seed 806915476 [--attempt-id ...] [--incident-parent ...]
   Rehearsal (diagnostic only, never evidence):
-  ... --cell R1 --seed 806915476 --updates 400 --eval-every 200
+  ... --updates 400 --eval-every 200
 """
 
 from __future__ import annotations
@@ -42,6 +36,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import time
@@ -92,13 +87,21 @@ MANIFEST = DOCS / "MSEL_MANIFEST.json"
 RUNGS = CORPUS / "MSEL_RUNGS.json"
 RUNTIME_FREEZE = DOCS / "GPU_RUNTIME_FREEZE.json"
 RELEASE_RECORD = DOCS / "E0_v0.6.1_MECHANISM_SELECTION_EXECUTION_RELEASE.json"
+REPORT_SCHEMA = DOCS / "E0_v0.6.1_MSEL_REPORT_SCHEMA.json"
+P0_VERIFICATION = DOCS / "P0_SNAPSHOT_VERIFICATION.json"
 
-# Frozen digests (release-record bindings)
+# ---- frozen digests (authority/release-record + closure bindings) ----
 CONTRACT_SHA = "a70a910e2781fe5c37d625f5474032efaba32855d16446412eb590d55caf7e5b"
 ADDENDUM_SHA = "eecccdc3b6cb1e818d5084323c3101e5ce441bd9669ba97e0d91d74a038a950b"
-METRICS_SHA = "dde9e4e9bae2237dcef45568d325e6bccd4c66d2845a43da33ed17143c4c4118"
+METRICS_SHA = "dde9e4e9bae2237dcef45568d325e6bccd4c66d2845a43da33ed17143c4c4118"  # release record + closure
+STREAM_SHA = "71d5233721dcff8542a0fa8bac8af6fd440a69d3646bb965df61cedb6a848a77"  # PREEXEC_BUNDLE modules map
+RUNGS_SHA = "e83e6849e5e0db189e24df354c8d5ca8ade69de07a222cd126946ae07858db74"  # postmaterialization audit
+SCHEMA_SHA = "933731003536c4fb91318ad44abb830e917eb3e1ed00b2f71ef83bac67ce8100"  # design-artifacts r1 manifest
 RELEASE_SHA = "90365137f372b001324b2811d59f9277915dc7b64891e1f8a6620d176d6a07b8"
 P0_WEIGHTS_SHA = "ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15"
+RUNTIME_PIP_FREEZE_SHA = "ef6d062c81daf54a4a7a98aca1d2f4204476433e299c345d893a2f4bf0627011"  # release-record binding
+
+REPORT_SCHEMA_ID = "E0-v0.6.1-MSEL-REPORT-v0"
 
 UPDATES = 8_000
 EVAL_EVERY = 400
@@ -106,8 +109,21 @@ LABELS = ["ENTAILED", "CONTRADICTED", "UNKNOWN"]
 LABEL_TO_ID = {n: i for i, n in enumerate(LABELS)}
 DEPTHS = (1, 2, 3, 4)
 EVAL_BATCH = 128
-
 P_FROZEN_LR = 1.0e-3
+
+# Executable-code manifest: this harness + imported scientific implementation.
+CODE_MANIFEST_FILES = (
+    "scripts/e0/v061/mechanism_evidence_harness.py",
+    "scripts/e0/v061/gpu_smoke_harness.py",
+    "scripts/e0/v061/msel_stream.py",
+    "scripts/e0/v061/msel_metrics.py",
+    "scripts/e0/v061/deterministic_preamble.py",
+    "scripts/e0/q2_m0_qualify.py",
+    "scripts/e0/m0_model.py",
+    "scripts/e0/q1_cmdr_bootstrap.py",
+)
+
+PRIMARY_SEEDS = (806915476, 1031646469, 128439691, 555223894, 454204619, 1678768041)
 
 
 class DivergenceError(RuntimeError):
@@ -123,57 +139,141 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def git_head() -> str:
-    return subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT,
-        capture_output=True, text=True, check=True,
-    ).stdout.strip()
+def git_output(*args: str) -> str:
+    return subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True,
+                          text=True, check=True).stdout.strip()
 
 
-def cjson(obj) -> str:
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+def startup_provenance() -> dict:
+    """Capture the exact starting commit; REQUIRE a clean tracked worktree."""
+    head = git_output("rev-parse", "HEAD")
+    porcelain = git_output("status", "--porcelain")
+    if porcelain:
+        raise SystemExit(f"fail-closed: tracked worktree not clean at start:\n{porcelain}")
+    components = {}
+    canon = hashlib.sha256()
+    for rel in sorted(CODE_MANIFEST_FILES):
+        digest = sha256_file(REPO_ROOT / rel)
+        components[rel] = digest
+        canon.update(rel.encode("utf-8"))
+        canon.update(digest.encode("utf-8"))
+    return {
+        "repository_commit": head,
+        "working_tree_clean_at_start": True,
+        "code_sha256": canon.hexdigest(),
+        "code_components": components,
+    }
 
 
-def state_digest(named_tensors) -> str:
-    h = hashlib.sha256()
-    for name, tensor in named_tensors:
-        t = tensor.detach().to("cpu", torch.float32).contiguous()
-        h.update(name.encode("utf-8"))
-        h.update(str(tuple(t.shape)).encode("utf-8"))
-        h.update(t.numpy().tobytes())
-    return h.hexdigest()
+# ------------------------------------------------ schema validation (no deps)
+
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+_TYPE_MAP = {"object": dict, "array": list, "string": str, "boolean": bool,
+             "number": (int, float), "integer": int, "null": type(None)}
 
 
-def require_finite(tensor: torch.Tensor, code: str, update: int) -> None:
-    if not bool(torch.isfinite(tensor).all()):
-        raise DivergenceError(code, update)
+def _check_type(value, tname: str) -> bool:
+    py = _TYPE_MAP[tname]
+    if tname == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if tname == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if tname == "boolean":
+        return isinstance(value, bool)
+    return isinstance(value, py)
 
 
-def verify_frozen_inputs() -> dict:
-    """Hard-stop verification of every frozen input digest before model work."""
-    verified = {}
+def validate_against_schema(value, schema: dict, path: str = "$") -> list[str]:
+    """Minimal JSON-Schema validator covering exactly the keywords the frozen
+    report schema uses: type (incl. unions), const, enum, pattern, minimum,
+    maximum, required, properties, additionalProperties, items."""
+    errors: list[str] = []
+    if "const" in schema and value != schema["const"]:
+        errors.append(f"{path}: const mismatch ({value!r} != {schema['const']!r})")
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{path}: {value!r} not in enum {schema['enum']}")
+    tdecl = schema.get("type")
+    if tdecl is not None:
+        tnames = tdecl if isinstance(tdecl, list) else [tdecl]
+        if not any(_check_type(value, t) for t in tnames):
+            errors.append(f"{path}: type {type(value).__name__} not in {tnames}")
+            return errors
+    if isinstance(value, str) and "pattern" in schema:
+        if not re.search(schema["pattern"], value):
+            errors.append(f"{path}: pattern mismatch {schema['pattern']}")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if "minimum" in schema and value < schema["minimum"]:
+            errors.append(f"{path}: {value} < minimum {schema['minimum']}")
+        if "maximum" in schema and value > schema["maximum"]:
+            errors.append(f"{path}: {value} > maximum {schema['maximum']}")
+    if isinstance(value, dict):
+        for req in schema.get("required", []):
+            if req not in value:
+                errors.append(f"{path}: missing required property {req!r}")
+        props = schema.get("properties", {})
+        addl = schema.get("additionalProperties", True)
+        for k, v in value.items():
+            if k in props:
+                errors.extend(validate_against_schema(v, props[k], f"{path}.{k}"))
+            elif isinstance(addl, dict):
+                errors.extend(validate_against_schema(v, addl, f"{path}.{k}"))
+            elif addl is False:
+                errors.append(f"{path}: additional property {k!r} not allowed")
+    if isinstance(value, list) and "items" in schema:
+        for i, item in enumerate(value):
+            errors.extend(validate_against_schema(item, schema["items"], f"{path}[{i}]"))
+    return errors
+
+
+# ---------------------------------------------------- frozen-input verification
+
+def verify_frozen_inputs(cell: str, provenance: dict) -> dict:
+    """Hard byte-level verification of every frozen executable/data input."""
+    verified: dict[str, str] = {}
+    problems: list[str] = []
+
+    def check_file(path: Path, expected: str, label: str):
+        if not path.is_file():
+            problems.append(f"{label}: missing {path}")
+            return
+        actual = sha256_file(path)
+        if actual != expected:
+            problems.append(f"{label}: {actual} != frozen {expected}")
+        else:
+            verified[label] = actual
+
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    split_digests = manifest["splits"]  # keys: "<split>_d<dep>" (no .jsonl suffix)
+    verified["manifest"] = sha256_file(MANIFEST)
     for split in ("train_pool", "dev_ID", "eval_ID", "eval_STRUCT"):
         for dep in DEPTHS:
             key = f"{split}_d{dep}"
-            path = CORPUS / f"{key}.jsonl"
-            if not path.is_file():
-                raise SystemExit(f"fail-closed: corpus file missing: {path}")
-            actual = sha256_file(path)
-            expected = split_digests[key]["sha256"]
-            if actual != expected:
-                raise SystemExit(f"fail-closed: {key} digest {actual} != frozen {expected}")
-            verified[key] = actual
-    rel = sha256_file(RELEASE_RECORD)
-    if rel != RELEASE_SHA:
-        raise SystemExit(f"fail-closed: release record digest {rel} != frozen {RELEASE_SHA}")
-    verified["_release_record"] = rel
+            check_file(CORPUS / f"{key}.jsonl", manifest["splits"][key]["sha256"], key)
+
+    check_file(RUNS, RUNGS_SHA, "rungs")
+    check_file(REPORT_SCHEMA, SCHEMA_SHA, "report_schema")
+    check_file(HERE / "msel_stream.py", STREAM_SHA, "msel_stream.py")
+    check_file(HERE / "msel_metrics.py", METRICS_SHA, "msel_metrics.py")
+    check_file(RELEASE_RECORD, RELEASE_SHA, "release_record")
+
+    freeze = json.loads(RUNTIME_FREEZE.read_text(encoding="utf-8"))
+    if freeze.get("runtime", {}).get("pip_freeze_sha256") != RUNTIME_PIP_FREEZE_SHA:
+        problems.append("runtime_freeze: pip_freeze_sha256 != release-record binding")
+    verified["runtime_freeze"] = sha256_file(RUNTIME_FREEZE)
+
+    if not cell.startswith("R"):
+        p0 = json.loads(P0_VERIFICATION.read_text(encoding="utf-8"))
+        verified["p0_verification"] = sha256_file(P0_VERIFICATION)
+        for name, digest in p0["file_digests"].items():
+            check_file(P0_SNAP / name, digest, f"p0/{name}")
+
+    if problems:
+        raise SystemExit("fail-closed frozen-input verification:\n  " + "\n  ".join(problems))
     return verified
 
 
+# ------------------------------------------------------------ corpus and data
+
 def load_split(split: str, rung_families: dict | None = None) -> list[dict]:
-    """Load one split across depths; optional rung family filter (train_pool)."""
     rows = []
     for dep in DEPTHS:
         with (CORPUS / f"{split}_d{dep}.jsonl").open(encoding="utf-8") as f:
@@ -186,13 +286,11 @@ def load_split(split: str, rung_families: dict | None = None) -> list[dict]:
 
 
 def load_rung_families(rung: str) -> dict:
-    rungs_doc = json.loads(RUNGS.read_text(encoding="utf-8"))
+    rungs_doc = json.loads(RUNS.read_text(encoding="utf-8"))
     return {f"d{dep}": set(rungs_doc["family_ids"][f"d{dep}"][rung]) for dep in DEPTHS}
 
 
-# ---------------------------------------------------------------- R-path data
-
-def encode_lex(rows: list[dict]) -> list[dict]:
+def encode_lex(rows: list[dict], enforce_max_len: bool) -> list[dict]:
     from q1_cmdr_bootstrap import LEX
     from m0_model import MAX_LEN
     out = []
@@ -209,23 +307,10 @@ def encode_lex(rows: list[dict]) -> list[dict]:
             "depth": row["reasoning_depth_stratum"],
             "family_id": row["family_id"],
         })
+    if rejected and enforce_max_len:
+        raise SystemExit(f"fail-closed: {rejected} TRAIN examples over MAX_LEN — corpus contract violation")
     if rejected:
-        raise SystemExit(f"fail-closed: {rejected} train examples over MAX_LEN — corpus contract violation")
-    return out
-
-
-def encode_lex_eval(rows: list[dict]) -> list[dict]:
-    from q1_cmdr_bootstrap import LEX
-    out = []
-    for row in rows:
-        ids = __import__("q1_cmdr_bootstrap").LEX.encode(row["rendered"], append_decide=True)
-        out.append({
-            "sample_id": row["sample_id"],
-            "token_ids": ids,
-            "label_id": LABEL_TO_ID[row["gold_label"]],
-            "depth": row["reasoning_depth_stratum"],
-            "family_id": row["family_id"],
-        })
+        print(f"  WARNING: {rejected} eval examples over MAX_LEN excluded", flush=True)
     return out
 
 
@@ -239,9 +324,10 @@ def raw_rows(rows: list[dict]) -> list[dict]:
     } for row in rows]
 
 
-# ------------------------------------------------------------------- runners
+# ------------------------------------------------------------- mode-preserving
 
 def predict_r(model, rows: list[dict], device) -> list[int]:
+    was_training = model.training
     model.eval()
     preds = []
     with torch.no_grad():
@@ -249,11 +335,13 @@ def predict_r(model, rows: list[dict], device) -> list[int]:
             b = rows[start:start + EVAL_BATCH]
             ids, decide, _ = collate(b, device)
             preds.extend(int(x) for x in model(ids, decide).argmax(-1).tolist())
-    model.train()
+    model.train(was_training)
     return preds
 
 
 def predict_p(backbone, classifier, rows: list[dict], tok, device) -> list[int]:
+    was_bb = backbone.training
+    was_cls = classifier.training
     backbone.eval(); classifier.eval()
     preds = []
     with torch.no_grad():
@@ -262,18 +350,104 @@ def predict_p(backbone, classifier, rows: list[dict], tok, device) -> list[int]:
             input_ids, attention_mask, _ = collate_p0(b, tok, device)
             logits = p0_readout_logits(backbone, classifier, input_ids, attention_mask)
             preds.extend(int(x) for x in logits.argmax(-1).tolist())
-    backbone.train(); classifier.train()
+    backbone.train(was_bb); classifier.train(was_cls)
     return preds
 
+
+# ----------------------------------------------------------------- prediction
+
+def require_finite(tensor: torch.Tensor, code: str, update: int) -> None:
+    if not bool(torch.isfinite(tensor).all()):
+        raise DivergenceError(code, update)
+
+
+def state_digest(named_tensors) -> str:
+    h = hashlib.sha256()
+    for name, tensor in named_tensors:
+        t = tensor.detach().to("cpu", torch.float32).contiguous()
+        h.update(name.encode("utf-8"))
+        h.update(str(tuple(t.shape)).encode("utf-8"))
+        h.update(t.numpy().tobytes())
+    return h.hexdigest()
+
+
+def assemble_metrics(id_rows, pred_id, struct_rows, pred_struct) -> dict:
+    y_i = [r["label_id"] for r in id_rows]; d_i = [r["depth"] for r in id_rows]
+    y_s = [r["label_id"] for r in struct_rows]; d_s = [r["depth"] for r in struct_rows]
+    qm = msel_metrics.q_metrics(y_i, pred_id, d_i, y_s, pred_struct, d_s)
+    q24 = msel_metrics.q_2_4(y_i, pred_id, d_i, y_s, pred_struct, d_s)
+    recalls = msel_metrics.per_label_recall(y_i, pred_id, d_i, y_s, pred_struct, d_s)
+    fec_id = msel_metrics.family_exact_consistency(y_i, pred_id, [r["family_id"] for r in id_rows])
+    fec_s = msel_metrics.family_exact_consistency(y_s, pred_struct, [r["family_id"] for r in struct_rows])
+    per_depth = {}
+    for surface, rows, preds in (("ID", id_rows, pred_id), ("STRUCT", struct_rows, pred_struct)):
+        for dep in DEPTHS:
+            idx = [i for i, r in enumerate(rows) if r["depth"] == dep]
+            per_depth[f"{surface}_d{dep}"] = round(
+                sum(1 for i in idx if preds[i] == rows[i]["label_id"]) / max(1, len(idx)), 6)
+    return {
+        "Q": qm["Q"], "Q_ID": qm["Q_ID"], "Q_STRUCT": qm["Q_STRUCT"], "Q_2_4": q24,
+        "minimum_label_recall": recalls["minimum_label_recall"],
+        "per_label_recall": recalls,
+        "family_exact_consistency": {
+            "ID": fec_id, "STRUCT": fec_s,
+            "aggregate": msel_metrics.family_exact_consistency_aggregate(fec_id, fec_s)},
+        "per_depth_accuracy": per_depth,
+        "predictions": {"eval_ID_argmax": pred_id, "eval_STRUCT_argmax": pred_struct},
+    }
+
+
+def train_surface_diagnostics(train_rows, preds) -> dict:
+    """§9.6: same behavioral metrics on the unique training-membership surface.
+    Two-surface helpers are applied with the single surface duplicated on both
+    arguments — the duplicated cells leave the macro means unchanged, yielding
+    exactly the single-surface statistic. Interpretation-only; cannot satisfy
+    a transfer gate."""
+    y = [r["label_id"] for r in train_rows]
+    d = [r["depth"] for r in train_rows]
+    sma = msel_metrics.cmdr_sma(y, preds, d)
+    q24 = msel_metrics.q_2_4(y, preds, d, y, preds, d)
+    recalls = msel_metrics.per_label_recall(y, preds, d, y, preds, d)
+    fec = msel_metrics.family_exact_consistency(y, preds, [r["family_id"] for r in train_rows])
+    per_depth = {}
+    for dep in DEPTHS:
+        idx = [i for i, r in enumerate(train_rows) if r["depth"] == dep]
+        per_depth[f"d{dep}"] = round(
+            sum(1 for i in idx if preds[i] == train_rows[i]["label_id"]) / max(1, len(idx)), 6)
+    return {
+        "note": "interpretation-only; unique frozen training membership; no transfer-gate value",
+        "membership_examples": len(train_rows),
+        "cmdr_sma": sma,
+        "depth_2_4": q24,
+        "per_depth_accuracy": per_depth,
+        "per_label_recall": recalls,
+        "minimum_label_recall": recalls["minimum_label_recall"],
+        "family_exact_consistency": fec,
+        "train_argmax": preds,
+    }
+
+
+def zeros_metrics() -> dict:
+    """§10.1 divergence aggregation values."""
+    return {
+        "Q": 0.0, "Q_ID": 0.0, "Q_STRUCT": 0.0, "Q_2_4": 0.0,
+        "minimum_label_recall": 0.0,
+        "per_label_recall": {name: 0.0 for name in LABELS} | {"minimum_label_recall": 0.0},
+        "family_exact_consistency": {"ID": 0.0, "STRUCT": 0.0, "aggregate": 0.0},
+        "per_depth_accuracy": {},
+        "predictions": None,
+    }
+
+
+# --------------------------------------------------------------- R-path runner
 
 def run_r_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> dict:
     from m0_model import build_model
 
-    rung = cell  # R1 | R4 | R16
-    train_rows = encode_lex(load_split("train_pool", load_rung_families(rung)))
-    dev_rows = encode_lex_eval(load_split("dev_ID"))
-    eval_id_rows = encode_lex_eval(load_split("eval_ID"))
-    eval_struct_rows = encode_lex_eval(load_split("eval_STRUCT"))
+    train_rows = encode_lex(load_split("train_pool", load_rung_families(cell)), enforce_max_len=True)
+    dev_rows = encode_lex(load_split("dev_ID"), enforce_max_len=False)
+    eval_id_rows = encode_lex(load_split("eval_ID"), enforce_max_len=False)
+    eval_struct_rows = encode_lex(load_split("eval_STRUCT"), enforce_max_len=False)
 
     sample_ids = [r["sample_id"] for r in train_rows]
     by_sid = {r["sample_id"]: r for r in train_rows}
@@ -286,23 +460,13 @@ def run_r_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> d
         parameter_groups(model, "exclude_norm_bias"),
         lr=learning_rate(1), betas=BETAS, eps=ADAM_EPS)
 
-    return train_loop_r(
-        model, optimizer, stream, by_sid, dev_rows, eval_id_rows, eval_struct_rows,
-        cell, seed, updates, eval_every, device,
-        param_count=53_232_643, trainable_count=53_232_643,
-        backbone_seed=backbone_seed, model_family="C0/M0-CausalDense-v1")
-
-
-def train_loop_r(model, optimizer, stream, by_sid, dev_rows, eval_id_rows,
-                 eval_struct_rows, cell, seed, updates, eval_every, device,
-                 param_count, trainable_count, backbone_seed, model_family) -> dict:
     torch.cuda.reset_peak_memory_stats(device)
+    started = time.time()
     history = []
     best = {"update": 0, "sma": float("-inf"), "state": None}
     nonpad_tokens = 0
     forward_tokens = 0
     divergence = None
-    started = time.time()
 
     y_true_dev = [r["label_id"] for r in dev_rows]
     depths_dev = [r["depth"] for r in dev_rows]
@@ -345,75 +509,39 @@ def train_loop_r(model, optimizer, stream, by_sid, dev_rows, eval_id_rows,
     except DivergenceError as exc:
         divergence = {"code": exc.code, "update": exc.update}
 
-    wall = time.time() - started
-    final_state_digest = state_digest(model.state_dict().items())
+    final_digest = state_digest(model.state_dict().items())
 
     result = {
-        "cell": cell, "seed": seed, "model_family": model_family,
-        "param_count": param_count, "trainable_param_count": trainable_count,
-        "train_pool": {"examples": len(by_sid)},
-        "updates_requested": updates,
-        "history": history,
-        "nonpadding_token_presentations": nonpad_tokens,
-        "forward_token_count": forward_tokens,
-        "wall_seconds": round(wall, 1),
-        "peak_cuda_allocated_bytes": int(torch.cuda.max_memory_allocated(device)),
-        "peak_cuda_reserved_bytes": int(torch.cuda.max_memory_reserved(device)),
-        "final_update_state_digest": final_state_digest,
-        "divergence": divergence,
+        "cell": cell, "seed": seed, "updates_requested": updates, "history": history,
+        "final_checkpoint_sha256": final_digest,
+        "_counters": {"nonpad": nonpad_tokens, "forward": forward_tokens},
+        "_started": started,
+        "_device": device,
     }
 
     if divergence is not None or best["state"] is None:
         result["run_status"] = "DIVERGED_SCIENTIFIC" if divergence is not None else "INVALID_INFRASTRUCTURE"
-        result["selected_checkpoint"] = None
-        result["metrics"] = None
+        result["divergence"] = divergence
+        result["metrics"] = zeros_metrics()
+        result["_train_rows"] = None
+        result["_selected"] = None
         return result
 
-    # Restore the SELECTED checkpoint for all final evaluation.
     model.load_state_dict(best["state"])
+    pred_id = predict_r(model, eval_id_rows, device)
+    pred_struct = predict_r(model, eval_struct_rows, device)
+    metrics = assemble_metrics(eval_id_rows, pred_id, eval_struct_rows, pred_struct)
+    train_preds = predict_r(model, train_rows, device)
+    metrics["train_surface"] = train_surface_diagnostics(train_rows, train_preds)
     result["run_status"] = "VALID"
-    result["selected_checkpoint"] = {"update": best["update"], "dev_ID_cmdr_sma": best["sma"]}
-    result["selected_state_digest"] = state_digest(model.state_dict().items())
-    result["metrics"] = final_metrics_r(model, eval_id_rows, eval_struct_rows, device)
+    result["metrics"] = metrics
+    result["_train_rows"] = train_rows
+    result["_selected"] = {"update": best["update"], "sma": best["sma"],
+                           "sha256": state_digest(model.state_dict().items())}
     return result
 
 
-def final_metrics_r(model, eval_id_rows, eval_struct_rows, device) -> dict:
-    pred_id = predict_r(model, eval_id_rows, device)
-    pred_struct = predict_r(model, eval_struct_rows, device)
-    return assemble_metrics(eval_id_rows, pred_id, eval_struct_rows, pred_struct)
-
-
-def assemble_metrics(id_rows, pred_id, struct_rows, pred_struct) -> dict:
-    qm = msel_metrics.q_metrics(
-        [r["label_id"] for r in id_rows], pred_id, [r["depth"] for r in id_rows],
-        [r["label_id"] for r in struct_rows], pred_struct, [r["depth"] for r in struct_rows])
-    q24 = msel_metrics.q_2_4(
-        [r["label_id"] for r in id_rows], pred_id, [r["depth"] for r in id_rows],
-        [r["label_id"] for r in struct_rows], pred_struct, [r["depth"] for r in struct_rows])
-    recalls = msel_metrics.per_label_recall(
-        [r["label_id"] for r in id_rows], pred_id, [r["depth"] for r in id_rows],
-        [r["label_id"] for r in struct_rows], pred_struct, [r["depth"] for r in struct_rows])
-    fec_id = msel_metrics.family_exact_consistency(
-        [r["label_id"] for r in id_rows], pred_id, [r["family_id"] for r in id_rows])
-    fec_struct = msel_metrics.family_exact_consistency(
-        [r["label_id"] for r in struct_rows], pred_struct, [r["family_id"] for r in struct_rows])
-    per_depth = {}
-    for surface, rows, preds in (("ID", id_rows, pred_id), ("STRUCT", struct_rows, pred_struct)):
-        for dep in DEPTHS:
-            idx = [i for i, r in enumerate(rows) if r["depth"] == dep]
-            acc = sum(1 for i in idx if preds[i] == rows[i]["label_id"]) / max(1, len(idx))
-            per_depth[f"{surface}_d{dep}"] = round(acc, 6)
-    return {
-        "Q": qm["Q"], "Q_ID": qm["Q_ID"], "Q_STRUCT": qm["Q_STRUCT"], "Q_2_4": q24,
-        "per_label_recall": recalls,
-        "family_exact_consistency": {
-            "ID": fec_id, "STRUCT": fec_struct,
-            "aggregate": msel_metrics.family_exact_consistency_aggregate(fec_id, fec_struct)},
-        "per_depth_accuracy": per_depth,
-        "predictions": {"eval_ID_argmax": pred_id, "eval_STRUCT_argmax": pred_struct},
-    }
-
+# --------------------------------------------------------------- P-path runner
 
 def run_p_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> dict:
     from transformers import AutoTokenizer
@@ -422,8 +550,7 @@ def run_p_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> d
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
 
-    rung = "R1"
-    train_rows = raw_rows(load_split("train_pool", load_rung_families(rung)))
+    train_rows = raw_rows(load_split("train_pool", load_rung_families("R1")))
     dev_rows = raw_rows(load_split("dev_ID"))
     eval_id_rows = raw_rows(load_split("eval_ID"))
     eval_struct_rows = raw_rows(load_split("eval_STRUCT"))
@@ -432,14 +559,15 @@ def run_p_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> d
     by_sid = {r["sample_id"]: r for r in train_rows}
     stream = MSELExampleStream(sample_ids, seed)
 
-    if cell == "P-FROZEN":
+    frozen = cell == "P-FROZEN"
+    if frozen:
         backbone, classifier = build_p0_classification("P-FT", seed, device)
         for p in backbone.parameters():
             p.requires_grad_(False)
         backbone.eval()
         optimizer = torch.optim.AdamW(
             [{"params": list(classifier.parameters()), "weight_decay": 0.0}],
-            lr=P_FROZEN_LR, betas=BETAS, eps=ADAM_EPS)  # constant schedule (§6.4)
+            lr=P_FROZEN_LR, betas=BETAS, eps=ADAM_EPS)
         param_count = EXPECTED_P0_BACKBONE + EXPECTED_P0_CLASSIFIER
         trainable_count = EXPECTED_P0_CLASSIFIER
     else:
@@ -451,23 +579,13 @@ def run_p_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> d
         param_count = EXPECTED_P0_BACKBONE + EXPECTED_P0_CLASSIFIER
         trainable_count = param_count
 
-    return train_loop_p(
-        backbone, classifier, optimizer, tok, cell, stream, by_sid, dev_rows,
-        eval_id_rows, eval_struct_rows, seed, updates, eval_every, device,
-        param_count=param_count, trainable_count=trainable_count)
-
-
-def train_loop_p(backbone, classifier, optimizer, tok, cell, stream, by_sid,
-                 dev_rows, eval_id_rows, eval_struct_rows, seed, updates,
-                 eval_every, device, param_count, trainable_count) -> dict:
-    frozen = cell == "P-FROZEN"
     torch.cuda.reset_peak_memory_stats(device)
+    started = time.time()
     history = []
     best = {"update": 0, "sma": float("-inf"), "state": None}
     nonpad_tokens = 0
     forward_tokens = 0
     divergence = None
-    started = time.time()
 
     y_true_dev = [r["label_id"] for r in dev_rows]
     depths_dev = [r["depth"] for r in dev_rows]
@@ -510,7 +628,12 @@ def train_loop_p(backbone, classifier, optimizer, tok, cell, stream, by_sid,
                 require_finite(p.data, "nonfinite_parameters_after_step", update)
 
             if update % eval_every == 0:
+                if frozen:
+                    # frozen-backbone invariant (V06-EVIDENCE-HARNESS-REMEDIATION-1 directive 4)
+                    assert backbone.training is False, "frozen backbone left training mode"
                 preds = predict_p(backbone, classifier, dev_rows, tok, device)
+                if frozen:
+                    assert backbone.training is False, "frozen backbone entered training mode during eval"
                 sma = msel_metrics.cmdr_sma(y_true_dev, preds, depths_dev)
                 if not np.isfinite(sma):
                     raise DivergenceError("nonfinite_eval_metric", update)
@@ -524,44 +647,153 @@ def train_loop_p(backbone, classifier, optimizer, tok, cell, stream, by_sid,
     except DivergenceError as exc:
         divergence = {"code": exc.code, "update": exc.update}
 
-    wall = time.time() - started
     named_final = ([(f"backbone.{n}", p) for n, p in backbone.state_dict().items()]
                    + [(f"classifier.{n}", p) for n, p in classifier.state_dict().items()])
     final_digest = state_digest(named_final)
 
     result = {
-        "cell": cell, "seed": seed, "model_family": "P0-70M/GPTNeoX-classification",
-        "param_count": param_count, "trainable_param_count": trainable_count,
-        "backbone_params": EXPECTED_P0_BACKBONE, "classifier_params": EXPECTED_P0_CLASSIFIER,
-        "train_pool": {"examples": len(by_sid), "rung": "R1"},
-        "updates_requested": updates,
-        "history": history,
-        "nonpadding_token_presentations": nonpad_tokens,
-        "forward_token_count": forward_tokens,
-        "wall_seconds": round(wall, 1),
-        "peak_cuda_allocated_bytes": int(torch.cuda.max_memory_allocated(device)),
-        "peak_cuda_reserved_bytes": int(torch.cuda.max_memory_reserved(device)),
-        "final_update_state_digest": final_digest,
-        "divergence": divergence,
+        "cell": cell, "seed": seed, "updates_requested": updates, "history": history,
+        "final_checkpoint_sha256": final_digest,
+        "_counters": {"nonpad": nonpad_tokens, "forward": forward_tokens},
+        "_started": started,
+        "_device": device,
+        "_param_count": param_count, "_trainable_count": trainable_count,
+        "_tokenizer_len": len(tok),
     }
 
     if divergence is not None or best["state"] is None:
         result["run_status"] = "DIVERGED_SCIENTIFIC" if divergence is not None else "INVALID_INFRASTRUCTURE"
-        result["selected_checkpoint"] = None
-        result["metrics"] = None
+        result["divergence"] = divergence
+        result["metrics"] = zeros_metrics()
+        result["_train_rows"] = None
+        result["_selected"] = None
         return result
 
     backbone.load_state_dict(best["state"]["backbone"])
     classifier.load_state_dict(best["state"]["classifier"])
-    result["run_status"] = "VALID"
-    result["selected_checkpoint"] = {"update": best["update"], "dev_ID_cmdr_sma": best["sma"]}
-    named_sel = ([(f"backbone.{n}", p) for n, p in backbone.state_dict().items()]
-                 + [(f"classifier.{n}", p) for n, p in classifier.state_dict().items()])
-    result["selected_state_digest"] = state_digest(named_sel)
+    if frozen:
+        backbone.eval()
     pred_id = predict_p(backbone, classifier, eval_id_rows, tok, device)
     pred_struct = predict_p(backbone, classifier, eval_struct_rows, tok, device)
-    result["metrics"] = assemble_metrics(eval_id_rows, pred_id, eval_struct_rows, pred_struct)
+    metrics = assemble_metrics(eval_id_rows, pred_id, eval_struct_rows, pred_struct)
+    train_preds = predict_p(backbone, classifier, train_rows, tok, device)
+    metrics["train_surface"] = train_surface_diagnostics(train_rows, train_preds)
+    result["run_status"] = "VALID"
+    result["metrics"] = metrics
+    result["_train_rows"] = train_rows
+    named_sel = ([(f"backbone.{n}", p) for n, p in backbone.state_dict().items()]
+                 + [(f"classifier.{n}", p) for n, p in classifier.state_dict().items()])
+    result["_selected"] = {"update": best["update"], "sma": best["sma"],
+                           "sha256": state_digest(named_sel)}
     return result
+
+
+# ------------------------------------------------------------------ report
+
+def build_report(result: dict, cell: str, seed: int, provenance: dict,
+                 verified: dict, rehearsal: bool, attempt_id: str,
+                 incident_parent) -> dict:
+    from q2_m0_qualify import host_peak_memory_bytes
+
+    # Resource telemetry finalized AFTER all mandatory evaluations (directive 6)
+    wall = time.time() - result["_started"]
+    device = result["_device"]
+
+    metrics = result["metrics"]
+    train_rows = result.get("_train_rows")
+    selected = result.get("_selected")
+
+    if cell.startswith("R"):
+        param_count = 53_232_643
+        trainable_count = 53_232_643
+        model_identity = {
+            "family": "C0/M0-CausalDense-v1",
+            "architecture": "15 layers, width 512, SwiGLU 1536, RMSNorm, RoPE",
+            "tokenizer": "CMDR-Lex-v1",
+        }
+        train_membership = {"rung": cell, "surface": "ID", "examples": len(train_rows) if train_rows else None}
+    else:
+        param_count = result["_param_count"]
+        trainable_count = result["_trainable_count"]
+        model_identity = {
+            "family": "P0-70M/GPTNeoX-classification",
+            "backbone_params": EXPECTED_P0_BACKBONE,
+            "classifier_params": EXPECTED_P0_CLASSIFIER,
+            "tokenizer": "P0 native (pinned snapshot)",
+            "tokenizer_len": result.get("_tokenizer_len"),
+            "backbone_init": ("frozen_pretrained" if cell == "P-FROZEN"
+                              else "pretrained" if cell == "P-FT" else "random_from_frozen_config"),
+            "backbone_frozen": cell == "P-FROZEN",
+        }
+        train_membership = {"rung": "R1", "surface": "ID", "examples": len(train_rows) if train_rows else None}
+
+    report = {
+        "schema_id": REPORT_SCHEMA_ID,
+        "contract_sha256": CONTRACT_SHA,
+        "code_sha256": provenance["code_sha256"],
+        "runtime_snapshot_sha256": verified["runtime_freeze"],
+        "regime_id": cell,
+        "master_seed": seed,
+        "rng_substreams": {
+            name: rng_substream(seed, name)
+            for name in ("backbone_init", "classifier_init", "data_order", "dataloader_workers")},
+        "run_status": result["run_status"],
+        "attempt_id": attempt_id,
+        "incident_parent": incident_parent,
+        "working_tree_clean_at_start": provenance["working_tree_clean_at_start"],
+        "repository_commit": provenance["repository_commit"],
+        "dataset_digests": {
+            k: v for k, v in verified.items() if not k.startswith("p0/")},
+        "model_identity": model_identity,
+        "parameter_count": param_count,
+        "trainable_parameter_count": trainable_count,
+        "selected_checkpoint_update": selected["update"] if selected else None,
+        "selected_checkpoint_sha256": selected.get("sha256") if selected else None,
+        "final_checkpoint_sha256": result["final_checkpoint_sha256"],
+        "metrics": metrics,
+        "resource": {
+            "wall_seconds": round(wall, 1),
+            "peak_accelerator_memory_bytes": int(torch.cuda.max_memory_allocated(device)),
+            "host_peak_rss_bytes": host_peak_memory_bytes(),
+            "nonpadding_token_presentations": result["_counters"]["nonpad"],
+            "forward_token_count": result["_counters"]["forward"],
+            "estimated_flops": None,
+            "peak_cuda_reserved_bytes": int(torch.cuda.max_memory_reserved(device)),
+        },
+        "training_stream": {
+            "algorithm": "MSEL-ExampleStream-v1",
+            "seed_input": "master_seed",
+            "presentations_contract": PRESENTATIONS,
+            "presentations_executed": result["updates_requested"] * EFFECTIVE_BATCH,
+        },
+        "train_membership": train_membership,
+        "selection": {
+            "metric": "dev_ID CMDR-SMA",
+            "cadence_updates": EVAL_EVERY,
+            "tie_break": "earliest_update",
+            "history": result["history"],
+        },
+        "divergence": result.get("divergence"),
+        "bindings": {
+            "spec_bound_addendum_sha256": ADDENDUM_SHA,
+            "metric_implementation_sha256": METRICS_SHA,
+            "stream_implementation_sha256": STREAM_SHA,
+            "rungs_sha256": RUNGS_SHA,
+            "report_schema_sha256": SCHEMA_SHA,
+            "release_record_sha256": RELEASE_SHA,
+            "runtime_pip_freeze_sha256": RUNTIME_PIP_FREEZE_SHA,
+        },
+        "provenance_code_components": provenance["code_components"],
+        "probe_geometry": None,
+        "notes": [],
+    }
+    if selected:
+        report["notes"].append(
+            f"selected checkpoint update {selected['update']} dev_ID_cmdr_sma {selected['sma']}")
+    if rehearsal:
+        report["diagnostic_only_not_evidence"] = True
+        report["notes"].append("REHEARSAL: reduced updates/eval cadence; not §17 evidence")
+    return report
 
 
 def main() -> None:
@@ -569,75 +801,66 @@ def main() -> None:
     parser.add_argument("--cell", required=True,
                         choices=["R1", "R4", "R16", "P-FROZEN", "P-FT", "P-RANDOM"])
     parser.add_argument("--seed", type=int, required=True)
-    parser.add_argument("--updates", type=int, default=UPDATES,
-                        help="rehearsal override; anything but 8000 is diagnostic-only")
+    parser.add_argument("--updates", type=int, default=UPDATES)
     parser.add_argument("--eval-every", type=int, default=EVAL_EVERY)
+    parser.add_argument("--attempt-id", default=None)
+    parser.add_argument("--incident-parent", default=None)
     args = parser.parse_args()
 
-    if not args.seed in (806915476, 1031646469, 128439691, 555223894,
-                         454204619, 1678768041):
+    if args.seed not in PRIMARY_SEEDS:
         raise SystemExit(f"seed {args.seed} is not one of the six frozen primary seeds")
     rehearsal = args.updates != UPDATES or args.eval_every != EVAL_EVERY
 
-    venv_ok = ".venv" in str(Path(sys.executable).resolve())
-    if not venv_ok:
+    if ".venv" not in str(Path(sys.executable).resolve()):
         raise SystemExit("fail-closed: run under the frozen .venv interpreter "
                          "(.venv/Scripts/python.exe) per GPU_RUNTIME_FREEZE.json")
 
+    # Directive 5: provenance captured at process start; clean tree REQUIRED.
+    provenance = startup_provenance()
+    print(f"start commit {provenance['repository_commit'][:12]} (clean tree) "
+          f"code_sha256 {provenance['code_sha256'][:12]}", flush=True)
+
+    if not verify_applied(DET_STATE):
+        raise SystemExit("fail-closed: deterministic preamble not verified BEFORE model construction")
     if not torch.cuda.is_available():
         raise SystemExit("CUDA unavailable — frozen contract requires CUDA")
     device = torch.device("cuda")
 
-    verified = verify_frozen_inputs()
-    print(f"corpus digests verified ({len([k for k in verified if not k.startswith('_')])} files); "
-          f"release record verified", flush=True)
+    verified = verify_frozen_inputs(args.cell, provenance)
+    print(f"frozen inputs verified: {len(verified)} digests OK", flush=True)
 
     if args.cell.startswith("R"):
         result = run_r_cell(args.cell, args.seed, args.updates, args.eval_every, device)
     else:
         result = run_p_cell(args.cell, args.seed, args.updates, args.eval_every, device)
 
-    from q2_m0_qualify import host_peak_memory_bytes
-    result["peak_host_rss_bytes"] = host_peak_memory_bytes()
-    result["deterministic_state"] = query_det()
-    result["deterministic_state_verified"] = bool(verify_applied(DET_STATE))
-    result["rng_substreams"] = {
-        name: rng_substream(args.seed, name)
-        for name in ("backbone_init", "classifier_init", "data_order", "dataloader_workers")}
-    result["training_stream"] = {
-        "algorithm": "MSEL-ExampleStream-v1",
-        "seed_input": "master_seed",
-        "presentations": PRESENTATIONS if not rehearsal else args.updates * EFFECTIVE_BATCH,
-    }
-    result["bindings"] = {
-        "contract_sha256": CONTRACT_SHA,
-        "spec_bound_addendum_sha256": ADDENDUM_SHA,
-        "metric_implementation_sha256": METRICS_SHA,
-        "release_record_sha256": RELEASE_SHA,
-        "p0_weights_sha256": P0_WEIGHTS_SHA if not args.cell.startswith("R") else None,
-        "runtime_freeze_sha256": sha256_file(RUNTIME_FREEZE),
-        "code_git_commit": git_head(),
-        "verified_corpus_digests": verified,
-    }
-    result["rehearsal"] = rehearsal
-    if rehearsal:
-        result["diagnostic_only_not_evidence"] = True
+    attempt_id = args.attempt_id or f"{args.cell}|{args.seed}|{int(time.time())}"
+    report = build_report(result, args.cell, args.seed, provenance, verified,
+                          rehearsal, attempt_id, args.incident_parent)
 
-    out_dir = EVIDENCE_DIR / args.cell
-    out_dir.mkdir(parents=True, exist_ok=True)
-    suffix = f"seed{args.seed}" + ("_rehearsal" if rehearsal else "")
-    out = out_dir / f"{args.cell}_{suffix}.json"
-    out.write_text(json.dumps(result, indent=2, default=str) + "\n",
-                   encoding="utf-8", newline="\n")
-    if rehearsal:
-        alt = REPO_ROOT / "local_data" / "rehearsal" / out.name
-        alt.parent.mkdir(parents=True, exist_ok=True)
-        alt.write_text(json.dumps(result, indent=2, default=str) + "\n",
+    # Directive 2: fail closed unless the frozen report schema is satisfied.
+    schema = json.loads(REPORT_SCHEMA.read_text(encoding="utf-8"))
+    errors = validate_against_schema(report, schema)
+    if errors:
+        for e in errors:
+            print(f"SCHEMA VIOLATION: {e}", flush=True)
+        out = REPO_ROOT / "local_data" / "schema_rejected" / f"{args.cell}_seed{args.seed}_rejected.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(report, indent=2, default=str) + "\n",
                        encoding="utf-8", newline="\n")
-        out.unlink()  # rehearsals never live in docs/
-        out = alt
-    print(f"\nrun_status: {result['run_status']}  report: {out}", flush=True)
-    sys.exit(0 if result["run_status"] in ("VALID", "DIVERGED_SCIENTIFIC") else 1)
+        raise SystemExit(f"fail-closed: report violates frozen schema ({len(errors)} errors); "
+                          f"rejected draft preserved at {out}")
+
+    if rehearsal:
+        out = REPO_ROOT / "local_data" / "rehearsal" / f"{args.cell}_seed{args.seed}_rehearsal.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        out = EVIDENCE_DIR / args.cell / f"{args.cell}_seed{args.seed}.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2, default=str) + "\n",
+                   encoding="utf-8", newline="\n")
+    print(f"\nrun_status: {report['run_status']}  report: {out}", flush=True)
+    sys.exit(0 if report["run_status"] in ("VALID", "DIVERGED_SCIENTIFIC") else 1)
 
 
 if __name__ == "__main__":
