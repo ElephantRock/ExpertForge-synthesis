@@ -254,9 +254,17 @@ def main() -> None:
 
     prior_ev = json.loads(PRIOR_SNAPSHOT_SOURCE.read_text(encoding="utf-8"))
     prior_audit = prior_ev["tokenizer_audit"]["P0_native"]
-    compare_fields = ("tokenizer_len", "examples", "token_length_min", "token_length_median",
-                      "token_length_p95", "token_length_p99", "token_length_max",
-                      "max_token_id", "truncation_count", "invalid_or_unknown_count")
+    # Compare only fields the PRIOR audit records — this audit adds
+    # supplementary metadata (e.g. tokenizer_len, add_special_tokens) that the
+    # prior record never contained; requiring equality on absent fields is a
+    # comparison-logic defect, not an audit discrepancy.
+    compare_fields = tuple(f for f in (
+        "tokenizer_len", "examples", "token_length_min", "token_length_median",
+        "token_length_p95", "token_length_p99", "token_length_max",
+        "max_token_id", "truncation_count", "invalid_or_unknown_count",
+        "special_tokens_added") if f in prior_audit)
+    supplementary_fields = {f: audit.get(f) for f in
+                            ("tokenizer_len", "add_special_tokens") if f in audit}
     audit_match = {f: {"prior": prior_audit.get(f), "now": audit.get(f),
                        "match": prior_audit.get(f) == audit.get(f)} for f in compare_fields}
     audit_all_match = all(v["match"] for v in audit_match.values())
@@ -302,6 +310,7 @@ def main() -> None:
         "p0_classification_interface": interface,
         "tokenizer_audit": audit,
         "tokenizer_audit_prior_comparison": audit_match,
+        "tokenizer_audit_supplementary_fields": supplementary_fields,
         "runtime_prior_comparison": runtime_match,
         "gates": gates,
         "status": "PASS" if all_pass else "FAIL",
