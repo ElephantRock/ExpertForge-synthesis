@@ -37,7 +37,7 @@
 5. STILL HELD: student qualification, source/headroom, Q3, final E0 corpus,
    A0, adapter evidence, architecture experiments, Engram/HCM.
 
-## Superseded state: V06-GPU-BOOTSTRAP-REMEDIATION-1 COMPLETE — awaiting authority final §17 audit
+## V06-GPU-BOOTSTRAP-REMEDIATION-1 — COMPLETE: ALL GATES PASS (§17 items 20/21/23 admitted at audited head 6435a8d)
 
 ### V06-GPU-BOOTSTRAP-EXECUTION-AUTHORIZED (r0) — RULED NOT ADMITTED, PRESERVED AS DIAGNOSTIC
 The r0 smokes/replays executed on a firewall weakened post-observation
