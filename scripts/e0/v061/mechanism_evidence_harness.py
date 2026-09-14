@@ -100,6 +100,12 @@ SCHEMA_SHA = "933731003536c4fb91318ad44abb830e917eb3e1ed00b2f71ef83bac67ce8100" 
 RELEASE_SHA = "90365137f372b001324b2811d59f9277915dc7b64891e1f8a6620d176d6a07b8"
 P0_WEIGHTS_SHA = "ebfa4e2f18696ebd83716a0d39fe2c025f2ff8483f72a83ca59c475692fc9d15"
 RUNTIME_PIP_FREEZE_SHA = "ef6d062c81daf54a4a7a98aca1d2f4204476433e299c345d893a2f4bf0627011"  # release-record binding
+# Immutable roots of trust (V06-EVIDENCE-HARNESS-CLOSURE-CORRIGENDUM-1):
+# the manifest / runtime-freeze / P0-verification records themselves are
+# bound by content SHA so they cannot become mutable roots of trust.
+MANIFEST_SHA = "35f3adf3dd906f99686804fe74ca9fd649d69d5d7a9c4fa7d7466b4298ad9757"
+RUNTIME_FREEZE_SHA = "eaeffc307aaf19941513273522e021d2d2a8a20becad07b7641028ed5a19b181"
+P0_VERIFICATION_SHA = "16484278099d90653857f955fbb45d3940b1f56d03b79d03d38013e73e1c6c56"
 
 REPORT_SCHEMA_ID = "E0-v0.6.1-MSEL-REPORT-v0"
 
@@ -242,8 +248,9 @@ def verify_frozen_inputs(cell: str, provenance: dict) -> dict:
         else:
             verified[label] = actual
 
+    # Immutable roots of trust: bind the records themselves before reading them.
+    check_file(MANIFEST, MANIFEST_SHA, "manifest")
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    verified["manifest"] = sha256_file(MANIFEST)
     for split in ("train_pool", "dev_ID", "eval_ID", "eval_STRUCT"):
         for dep in DEPTHS:
             key = f"{split}_d{dep}"
@@ -255,20 +262,75 @@ def verify_frozen_inputs(cell: str, provenance: dict) -> dict:
     check_file(HERE / "msel_metrics.py", METRICS_SHA, "msel_metrics.py")
     check_file(RELEASE_RECORD, RELEASE_SHA, "release_record")
 
+    check_file(RUNTIME_FREEZE, RUNTIME_FREEZE_SHA, "runtime_freeze")
     freeze = json.loads(RUNTIME_FREEZE.read_text(encoding="utf-8"))
     if freeze.get("runtime", {}).get("pip_freeze_sha256") != RUNTIME_PIP_FREEZE_SHA:
         problems.append("runtime_freeze: pip_freeze_sha256 != release-record binding")
-    verified["runtime_freeze"] = sha256_file(RUNTIME_FREEZE)
 
     if not cell.startswith("R"):
+        check_file(P0_VERIFICATION, P0_VERIFICATION_SHA, "p0_verification")
         p0 = json.loads(P0_VERIFICATION.read_text(encoding="utf-8"))
-        verified["p0_verification"] = sha256_file(P0_VERIFICATION)
         for name, digest in p0["file_digests"].items():
             check_file(P0_SNAP / name, digest, f"p0/{name}")
+        if p0["file_digests"]["model.safetensors"] != P0_WEIGHTS_SHA:
+            problems.append("p0_verification: model.safetensors digest != release-record binding "
+                            f"{P0_WEIGHTS_SHA}")
 
     if problems:
         raise SystemExit("fail-closed frozen-input verification:\n  " + "\n  ".join(problems))
     return verified
+
+
+def verify_live_runtime() -> dict:
+    """CLOSURE-CORRIGENDUM-1 directive 2: executable proof that the LIVE
+    interpreter equals the frozen runtime. Compares the running process's
+    identity fields and a freshly computed pip freeze against the (already
+    SHA-verified) GPU_RUNTIME_FREEZE.json record. Fail closed on any drift."""
+    frozen = json.loads(RUNTIME_FREEZE.read_text(encoding="utf-8"))["runtime"]
+    live: dict[str, object] = {
+        "python_version": sys.version.split()[0],
+        "python_implementation": sys.implementation.name,
+    }
+    import torch as _torch
+    live["torch_version"] = _torch.__version__
+    live["cuda_available"] = _torch.cuda.is_available()
+    if _torch.cuda.is_available():
+        live["cuda_version"] = _torch.version.cuda
+        live["gpu_name"] = _torch.cuda.get_device_name(0)
+        live["gpu_memory_bytes"] = _torch.cuda.get_device_properties(0).total_memory
+        live["bf16_supported"] = _torch.cuda.is_bf16_supported()
+        live["cudnn_version"] = _torch.backends.cudnn.version()
+        live["cudnn_enabled"] = _torch.backends.cudnn.enabled
+    import transformers as _tf, tokenizers as _tk
+    import numpy as _np, scipy as _sp, sklearn as _sk, igraph as _ig
+    live["transformers_version"] = _tf.__version__
+    live["tokenizers_version"] = _tk.__version__
+    live["numpy_version"] = _np.__version__
+    live["scipy_version"] = _sp.__version__
+    live["sklearn_version"] = _sk.__version__
+    live["igraph_version"] = _ig.__version__
+    nvidia = subprocess.run(["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+                            capture_output=True, text=True)
+    if nvidia.returncode == 0:
+        live["nvidia_driver"] = nvidia.stdout.strip()
+    freeze = subprocess.run([sys.executable, "-m", "pip", "freeze"], cwd=REPO_ROOT,
+                            capture_output=True, text=True, check=True)
+    live["pip_freeze_sha256"] = hashlib.sha256(freeze.stdout.encode()).hexdigest()
+
+    mismatches = []
+    for field, expected in frozen.items():
+        if field in ("pip_freeze_text", "deterministic_state_queried", "deterministic_state_verified",
+                     "package_record_sha256"):
+            continue  # bound separately (pip freeze SHA above; det state by preamble verify)
+        if field not in live:
+            continue  # os/platform strings are environment-descriptive, not gate fields
+        if live[field] != expected:
+            mismatches.append(f"{field}: live={live[field]!r} frozen={expected!r}")
+    if live["pip_freeze_sha256"] != frozen["pip_freeze_sha256"]:
+        mismatches.append("pip_freeze_sha256: live environment differs from frozen runtime")
+    if mismatches:
+        raise SystemExit("fail-closed live-runtime equality gate:\n  " + "\n  ".join(mismatches))
+    return live
 
 
 # ------------------------------------------------------------ corpus and data
@@ -444,6 +506,13 @@ def zeros_metrics() -> dict:
 def run_r_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> dict:
     from m0_model import build_model
 
+    # CLOSURE-CORRIGENDUM-1 directive 4: full-run wall timer and peak-memory
+    # window start at cell-execution entry (before data loading/encoding and
+    # model/optimizer construction) and finalize after all mandatory
+    # evaluations and diagnostics.
+    torch.cuda.reset_peak_memory_stats(device)
+    started = time.time()
+
     train_rows = encode_lex(load_split("train_pool", load_rung_families(cell)), enforce_max_len=True)
     dev_rows = encode_lex(load_split("dev_ID"), enforce_max_len=False)
     eval_id_rows = encode_lex(load_split("eval_ID"), enforce_max_len=False)
@@ -460,8 +529,6 @@ def run_r_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> d
         parameter_groups(model, "exclude_norm_bias"),
         lr=learning_rate(1), betas=BETAS, eps=ADAM_EPS)
 
-    torch.cuda.reset_peak_memory_stats(device)
-    started = time.time()
     history = []
     best = {"update": 0, "sma": float("-inf"), "state": None}
     nonpad_tokens = 0
@@ -544,6 +611,11 @@ def run_r_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> d
 # --------------------------------------------------------------- P-path runner
 
 def run_p_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> dict:
+    # CLOSURE-CORRIGENDUM-1 directive 4: full-run wall timer and peak-memory
+    # window start at cell-execution entry (before tokenizer/backbone setup).
+    torch.cuda.reset_peak_memory_stats(device)
+    started = time.time()
+
     from transformers import AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(str(P0_SNAP))
@@ -579,8 +651,6 @@ def run_p_cell(cell: str, seed: int, updates: int, eval_every: int, device) -> d
         param_count = EXPECTED_P0_BACKBONE + EXPECTED_P0_CLASSIFIER
         trainable_count = param_count
 
-    torch.cuda.reset_peak_memory_stats(device)
-    started = time.time()
     history = []
     best = {"update": 0, "sma": float("-inf"), "state": None}
     nonpad_tokens = 0
@@ -724,6 +794,16 @@ def build_report(result: dict, cell: str, seed: int, provenance: dict,
             "backbone_init": ("frozen_pretrained" if cell == "P-FROZEN"
                               else "pretrained" if cell == "P-FT" else "random_from_frozen_config"),
             "backbone_frozen": cell == "P-FROZEN",
+            # CLOSURE-CORRIGENDUM-1 directive 3: the actual frozen artifact
+            # digests, each byte-verified against P0_SNAPSHOT_VERIFICATION
+            # (itself SHA-bound) with model.safetensors additionally required
+            # to equal the release-record binding ebfa4e2f…
+            "artifact_digests": {
+                name: verified[f"p0/{name}"]
+                for name in ("config.json", "model.safetensors", "tokenizer.json",
+                             "tokenizer_config.json", "special_tokens_map.json", "README.md")
+                if f"p0/{name}" in verified
+            },
         }
         train_membership = {"rung": "R1", "surface": "ID", "examples": len(train_rows) if train_rows else None}
 
@@ -828,6 +908,12 @@ def main() -> None:
 
     verified = verify_frozen_inputs(args.cell, provenance)
     print(f"frozen inputs verified: {len(verified)} digests OK", flush=True)
+
+    # Directive 2: executable proof the LIVE interpreter equals the frozen runtime.
+    live_runtime = verify_live_runtime()
+    print(f"live runtime == frozen runtime "
+          f"(torch {live_runtime['torch_version']}, transformers {live_runtime['transformers_version']}, "
+          f"pip-freeze SHA {live_runtime['pip_freeze_sha256'][:12]}…)", flush=True)
 
     if args.cell.startswith("R"):
         result = run_r_cell(args.cell, args.seed, args.updates, args.eval_every, device)
