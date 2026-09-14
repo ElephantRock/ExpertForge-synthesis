@@ -69,8 +69,9 @@ from q2_m0_qualify import (
 )
 
 REPO_ROOT = HERE.parent.parent.parent
-SMOKE_DIR = REPO_ROOT / "local_data" / "e0_v061_smoke"
+SMOKE_DIR = REPO_ROOT / "local_data" / "e0_v061_smoke_r2"
 DOCS = REPO_ROOT / "docs" / "experiments" / "e0" / "v061"
+GEN_EVIDENCE_NAME = "SMOKE_REPLAY_CORPORA_R2_EVIDENCE.json"
 P0_SNAP = Path(
     r"C:\huggingface_cache\hub\models--EleutherAI--pythia-70m\snapshots"
     r"\a39f36b100fe8a5377810d56c3f4789b9c53ac42"
@@ -454,10 +455,10 @@ def main() -> None:
         "train.jsonl": sha256_file(SMOKE_DIR / "train.jsonl"),
         "dev.jsonl": sha256_file(SMOKE_DIR / "dev.jsonl"),
     }
-    gen_evidence = DOCS / "SMOKE_REPLAY_CORPORA_EVIDENCE.json"
+    gen_evidence = DOCS / GEN_EVIDENCE_NAME
     if gen_evidence.is_file():
         gen = json.loads(gen_evidence.read_text(encoding="utf-8"))
-        bound = gen.get("smoke_corpus", {})
+        bound = gen.get("smoke_corpus_r2", {})
         if (bound.get("train_sha256") != corpus_digests["train.jsonl"]
                 or bound.get("dev_sha256") != corpus_digests["dev.jsonl"]):
             raise SystemExit("smoke corpus digests do not match generator evidence — fail closed")

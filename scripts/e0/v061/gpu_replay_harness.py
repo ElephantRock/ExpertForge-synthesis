@@ -71,7 +71,7 @@ from gpu_smoke_harness import (
     sha256_file,
 )
 
-REPLAY_DIR = REPO_ROOT / "local_data" / "e0_v061_replay"
+REPLAY_DIR = REPO_ROOT / "local_data" / "e0_v061_replay_r2"
 RUNS_DIR = REPLAY_DIR / "runs"
 DOCS = REPO_ROOT / "docs" / "experiments" / "e0" / "v061"
 
