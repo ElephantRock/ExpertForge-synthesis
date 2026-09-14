@@ -293,11 +293,13 @@ def build_p0_classification(arm: str, seed: int, device):
     from transformers import AutoConfig, AutoModelForCausalLM
 
     if arm == "P-FT":
-        full = AutoModelForCausalLM.from_pretrained(str(P0_SNAP), dtype=torch.float32)
+        full = AutoModelForCausalLM.from_pretrained(str(P0_SNAP), torch_dtype=torch.float32)
     elif arm == "P-RANDOM":
         cfg = AutoConfig.from_pretrained(str(P0_SNAP))
         torch.manual_seed(rng_substream(seed, "backbone_init"))
-        full = AutoModelForCausalLM.from_config(cfg)  # random init from frozen P0 config
+        # pythia config.json carries torch_dtype float16; override to the
+        # frozen FP32 execution contract (no silent FP16 substitution).
+        full = AutoModelForCausalLM.from_config(cfg, torch_dtype=torch.float32)
     else:
         raise ValueError(arm)
     backbone = full.gpt_neox  # embed_in + layers + final_layer_norm
@@ -305,7 +307,11 @@ def build_p0_classification(arm: str, seed: int, device):
     if backbone_params != EXPECTED_P0_BACKBONE:
         del full
         raise AssertionError(f"P0 backbone params {backbone_params} != frozen {EXPECTED_P0_BACKBONE}")
-    del full.lm_head
+    # transformers 4.50 names the untied LM head `embed_out`; later versions
+    # rename it `lm_head`. Remove whichever exists.
+    for head_name in ("lm_head", "embed_out"):
+        if hasattr(full, head_name):
+            delattr(full, head_name)
     torch.manual_seed(rng_substream(seed, "classifier_init"))
     classifier = torch.nn.Linear(backbone.config.hidden_size, 3, bias=True)
     cls_params = sum(p.numel() for p in classifier.parameters())
