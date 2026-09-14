@@ -144,10 +144,10 @@ def main() -> None:
     # --- Item 4: Decision program + schema ---
     print("=== 4. Decision program + schema ===", flush=True)
     r1_path = DOCS / "e0_v061_mechanism_decision_r1.py"
-    r1_sha = sha256_file(r1_path)
-    expected_r1 = "ab2fb6f69948f50aa44a1ae0b53a9f6949084ca9f30f4be7fc3885a8d1efb54"
+    r1_sha = hashlib.sha256(r1_path.read_bytes()).hexdigest()
+    expected_r1 = "ab2fb6f69948f50aa44a1ae0b53a9f6949084ca9f30f4be7fc388c5a8d1efb54"
     schema_path = DOCS / "E0_v0.6.1_MSEL_REPORT_SCHEMA.json"
-    schema_sha = sha256_file(schema_path)
+    schema_sha = hashlib.sha256(schema_path.read_bytes()).hexdigest()
     expected_schema = "933731003536c4fb91318ad44abb830e917eb3e1ed00b2f71ef83bac67ce8100"
     # run oracle
     oracle = subprocess.run([sys.executable, str(r1_path)], capture_output=True, text=True, timeout=60)
