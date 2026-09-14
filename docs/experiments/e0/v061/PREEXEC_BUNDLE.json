@@ -1,0 +1,118 @@
+{
+  "schema_id": "E0-V061-PREEXEC-BUNDLE-v0",
+  "authority": "V06-PREEXEC-IMPLEMENTATION-1",
+  "code_git_commit": "0fb90d7bf0b9124aafd8e02febfefb08b0cbc892",
+  "modules": {
+    "msel_corpus.py": "b129d870a38e4aee1faaa1f81b8dbe28c8d4187e4c5e47bb20671fe17789ea9e",
+    "msel_verifier.py": "0b7290b1a971ecc7224434b12b3c11e197fdaf8d088501fe6cfdbd78aa2de931",
+    "structsig_r3.py": "fb8e4944251f98fccd8bd13a6d521a42311fe33407b6862075f63a33e5743af6",
+    "msel_stream.py": "71d5233721dcff8542a0fa8bac8af6fd440a69d3646bb965df61cedb6a848a77",
+    "msel_metrics.py": "cc8bb51bdbbb9131a51339a969f5e7f95b695d6d85ec01d1cfcd4a1551fad619"
+  },
+  "item_1_full_verifier": {
+    "families": 134000,
+    "verifier_errors": 0,
+    "cf_invariance_errors": 0,
+    "status": "PASS",
+    "seconds": 163.1
+  },
+  "item_2_stream": {
+    "r1_sample_count": 6000,
+    "validation": {
+      "valid": true,
+      "sample_count": 6000,
+      "full_cycles": 170,
+      "remainder_in_final_cycle": 4000,
+      "total_presentations": 1024000,
+      "truncation_at_presentation": 1024000
+    },
+    "status": "PASS",
+    "prefix_matches_cycle0": true
+  },
+  "item_3_metrics": {
+    "self_tests": {
+      "perfect_accuracy": true,
+      "invalid_as_incorrect": true,
+      "order_independent": true,
+      "q24_ignores_d1": true,
+      "family_consistency_all": true,
+      "family_consistency_partial": true,
+      "equivalence_zero_diff": true,
+      "equivalence_large_diff": true,
+      "superiority_positive": true,
+      "superiority_zero": true
+    },
+    "status": "PASS"
+  },
+  "item_4_decision": {
+    "r1_sha256_recomputed": "ab2fb6f69948f50aa44a1ae0b53a9f6949084ca9f30f4be7fc388c5a8d1efb54",
+    "r1_sha256_matches": true,
+    "oracle_exit": 0,
+    "oracle_output_raw": "{'assignments_checked': 245, 'outcome_counts': {'INCONCLUSIVE': 32, 'PRETRAINED_VIABLE': 17, 'P0_RANDOM_VIABLE': 16, 'MULTIPLE_VIABLE': 131, 'IN_DOMAIN_ALLOCATION_VIABLE': 32, 'NEITHER_SUFFICIENT': 1, 'RANDOM_BASE_VIABLE': 16}, 'regression_case': 'PASS', 'status': 'PASS'}",
+    "schema_sha256_recomputed": "933731003536c4fb91318ad44abb830e917eb3e1ed00b2f71ef83bac67ce8100",
+    "schema_sha256_matches": true,
+    "status": "PASS"
+  },
+  "item_5_seeds": {
+    "all_seeds_match": true,
+    "substreams_derived": 24,
+    "substream_sample": {
+      "806915476|backbone_init": 266238500,
+      "806915476|classifier_init": 5726939,
+      "806915476|data_order": 1110695042,
+      "806915476|dataloader_workers": 119232162
+    },
+    "status": "PASS"
+  },
+  "item_6_tokenizers": {
+    "results": {
+      "P0": {
+        "tokenizer_len": 50277,
+        "vocab_size_declared": 50254,
+        "sample_count": 1000,
+        "token_length_min": 267,
+        "token_length_median": 283,
+        "token_length_p95": 286,
+        "token_length_max": 286,
+        "max_token_id": 49464,
+        "all_ids_below_50304": true,
+        "truncations_at_384": 0
+      },
+      "CMDR_Lex_v1": {
+        "vocab_size": 4096,
+        "sample_count": 1000,
+        "token_length_min": 146,
+        "token_length_median": 146,
+        "token_length_max": 146,
+        "all_below_384": true
+      }
+    },
+    "status": "PASS"
+  },
+  "item_7_runtime": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python_version": "3.12.10",
+    "python_implementation": "cpython",
+    "igraph_version": "1.0.0",
+    "torch_version": "2.14.0+cu126",
+    "cuda_available": true,
+    "gpu_name": "NVIDIA GeForce RTX 3080 Ti",
+    "gpu_memory": 12884246528,
+    "bf16_supported": true,
+    "transformers_version": "5.16.1",
+    "numpy_version": "2.3.5",
+    "scipy_version": "1.18.1",
+    "sklearn_version": "1.8.0",
+    "pip_freeze_sha256": "ef6d062c81daf54a4a7a98aca1d2f4204476433e299c345d893a2f4bf0627011"
+  },
+  "all_cpu_gates": {
+    "item_1": "PASS",
+    "item_2": "PASS",
+    "item_3": "PASS",
+    "item_4": "PASS",
+    "item_5": "PASS",
+    "item_6": "PASS"
+  },
+  "overall_status": "PASS",
+  "wall_seconds": 172.0
+}
