@@ -286,7 +286,7 @@ def load_split(split: str, rung_families: dict | None = None) -> list[dict]:
 
 
 def load_rung_families(rung: str) -> dict:
-    rungs_doc = json.loads(RUNS.read_text(encoding="utf-8"))
+    rungs_doc = json.loads(RUNGS.read_text(encoding="utf-8"))
     return {f"d{dep}": set(rungs_doc["family_ids"][f"d{dep}"][rung]) for dep in DEPTHS}
 
 
