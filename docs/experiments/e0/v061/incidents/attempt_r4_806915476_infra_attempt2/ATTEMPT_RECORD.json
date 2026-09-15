@@ -1,0 +1,17 @@
+{
+  "schema_id": "E0-V061-EVIDENCE-ATTEMPT-RECORD-v0",
+  "authority": "V06-MECHANISM-PRIMARY-BATCH-EXECUTION-AUTHORIZED (INVALID_INFRASTRUCTURE clause)",
+  "cell": "R4",
+  "master_seed": 806915476,
+  "attempt_id": "R4|806915476|gated-attempt-2",
+  "code_git_commit": "7d1e5c1d8dacf896bbb0e26a9cbdb4dc27ef3479",
+  "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+  "run_status": "INVALID_INFRASTRUCTURE",
+  "reason_codes": [
+    "GPU_CO_TENANT_CONTENTION_STALL"
+  ],
+  "reason_detail": "Co-tenant returned MID-RUN (launch was window-gated clean at 12:10). Stalled at update 2400/8000: log unwritten 24.6 min, worker CPU 0 s over 15 s, GPU 100%/11.9 GiB dominated by co-tenant. Same pathology as both prior incidents. Stopped deliberately; co-tenant untouched.",
+  "last_completed_checkpoint_evaluation": 2400,
+  "outcome": "No scientific metric admitted; same-seed rerun continues under \u00a710.1. Countermeasure upgrade: supervise_batch.sh monitors every live run (log-mtime + CPU-idle stall signature) and self-heals with window-gated same-seed retries, max 3 attempts per seed.",
+  "execution_log_sha256": "97f2e58d3e90d73980dc4eea2dc7502ef9ddd80a95217e07559b7d7d6ea16258"
+}
