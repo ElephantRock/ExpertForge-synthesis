@@ -1,0 +1,155 @@
+{
+  "schema_id": "E0-V061-MSEL-CELL-SIX-SEED-SUMMARY-v0",
+  "authority": "V06-MECHANISM-PRIMARY-BATCH-EXECUTION-AUTHORIZED",
+  "regime_id": "R1",
+  "code_git_commit": "7d1e5c1d8dacf896bbb0e26a9cbdb4dc27ef3479",
+  "training_code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+  "per_seed": [
+    {
+      "master_seed": 806915476,
+      "run_status": "VALID",
+      "selected_checkpoint_update": 400,
+      "Q": 0.3333333333333333,
+      "Q_ID": 0.3333333333333333,
+      "Q_STRUCT": 0.3333333333333333,
+      "Q_2_4": 0.3333333333333333,
+      "minimum_label_recall": 0.0,
+      "family_exact_consistency": {
+        "ID": 0.0,
+        "STRUCT": 0.0,
+        "aggregate": 0.0
+      },
+      "wall_seconds": 5940.4,
+      "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+      "repository_commit": "ba9040d8fc389edb878b17f7b95c25ec5f089dec"
+    },
+    {
+      "master_seed": 1031646469,
+      "run_status": "VALID",
+      "selected_checkpoint_update": 400,
+      "Q": 0.3333333333333333,
+      "Q_ID": 0.3333333333333333,
+      "Q_STRUCT": 0.3333333333333333,
+      "Q_2_4": 0.3333333333333333,
+      "minimum_label_recall": 0.0,
+      "family_exact_consistency": {
+        "ID": 0.0,
+        "STRUCT": 0.0,
+        "aggregate": 0.0
+      },
+      "wall_seconds": 5960.0,
+      "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+      "repository_commit": "f5f91dde01cbcdf35fcd846a39bfbd2f706ff5de"
+    },
+    {
+      "master_seed": 128439691,
+      "run_status": "VALID",
+      "selected_checkpoint_update": 400,
+      "Q": 0.3333333333333333,
+      "Q_ID": 0.3333333333333333,
+      "Q_STRUCT": 0.3333333333333333,
+      "Q_2_4": 0.3333333333333333,
+      "minimum_label_recall": 0.0,
+      "family_exact_consistency": {
+        "ID": 0.0,
+        "STRUCT": 0.0,
+        "aggregate": 0.0
+      },
+      "wall_seconds": 5986.9,
+      "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+      "repository_commit": "b11976c5c5c8f9ee3b63730ada5d12bf739e2eae"
+    },
+    {
+      "master_seed": 555223894,
+      "run_status": "VALID",
+      "selected_checkpoint_update": 6000,
+      "Q": 0.3335,
+      "Q_ID": 0.3335000000000001,
+      "Q_STRUCT": 0.33349999999999996,
+      "Q_2_4": 0.3333333333333333,
+      "minimum_label_recall": 0.0,
+      "family_exact_consistency": {
+        "ID": 0.0,
+        "STRUCT": 0.0,
+        "aggregate": 0.0
+      },
+      "wall_seconds": 5761.7,
+      "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+      "repository_commit": "222d67a67f69301e87421de86db171aff0fd426b"
+    },
+    {
+      "master_seed": 454204619,
+      "run_status": "VALID",
+      "selected_checkpoint_update": 2800,
+      "Q": 0.3331666666666666,
+      "Q_ID": 0.33349999999999996,
+      "Q_STRUCT": 0.3328333333333333,
+      "Q_2_4": 0.33299999999999996,
+      "minimum_label_recall": 0.0,
+      "family_exact_consistency": {
+        "ID": 0.0,
+        "STRUCT": 0.0,
+        "aggregate": 0.0
+      },
+      "wall_seconds": 5910.0,
+      "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+      "repository_commit": "9daf1b7078bde613c4dec0c080c5bc437988901e"
+    },
+    {
+      "master_seed": 1678768041,
+      "run_status": "VALID",
+      "selected_checkpoint_update": 400,
+      "Q": 0.3333333333333333,
+      "Q_ID": 0.3333333333333333,
+      "Q_STRUCT": 0.3333333333333333,
+      "Q_2_4": 0.3333333333333333,
+      "minimum_label_recall": 0.0,
+      "family_exact_consistency": {
+        "ID": 0.0,
+        "STRUCT": 0.0,
+        "aggregate": 0.0
+      },
+      "wall_seconds": 6091.2,
+      "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+      "repository_commit": "f66b994634e80b7fe99c54d97058be877d7d1f89"
+    }
+  ],
+  "summary": {
+    "median_Q": 0.3333333333333333,
+    "median_Q_2_4": 0.3333333333333333,
+    "median_Q_STRUCT": 0.3333333333333333,
+    "median_minimum_label_recall": 0.0,
+    "min_seed_Q": 0.3331666666666666,
+    "max_seed_Q": 0.3335
+  },
+  "gates": {
+    "TRANSFER_PASS": false,
+    "NO_TRANSFER_gate_values": {
+      "median_Q_le_0.40": true,
+      "median_Q_STRUCT_le_0.40": true,
+      "bootstrap_ucb_97_5_lt_0.45": true
+    }
+  },
+  "hierarchical_bootstrap": {
+    "status": "COMPUTED",
+    "median": 0.3333333333333333,
+    "ci_2_5": 0.33329166666666665,
+    "ci_97_5": 0.3334166666666667,
+    "replicates": 50000,
+    "bootstrap_seed": 1611111118,
+    "seed_qs": [
+      0.333333,
+      0.333333,
+      0.333333,
+      0.3335,
+      0.333167,
+      0.333333
+    ]
+  },
+  "transfer_state": "NO_TRANSFER",
+  "notes": [
+    "frozen \u00a710.2/\u00a710.3 gates only \u2014 no interpretation beyond the frozen thresholds",
+    "Q values recomputed from stored prediction vectors and asserted equal to reported metrics before aggregation",
+    "aggregator itself is outside the training CODE_MANIFEST_FILES set"
+  ]
+}
