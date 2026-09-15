@@ -1,0 +1,18 @@
+{
+  "schema_id": "E0-V061-EVIDENCE-ATTEMPT-RECORD-v0",
+  "authority": "V06-MECHANISM-PRIMARY-BATCH-EXECUTION-AUTHORIZED (INVALID_INFRASTRUCTURE clause)",
+  "cell": "R4",
+  "master_seed": 806915476,
+  "attempt_id": "R4|806915476|batch-attempt-1",
+  "code_git_commit": "6015bfd6bb636db53339c068a8b074b172e51cb6",
+  "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+  "run_status": "INVALID_INFRASTRUCTURE",
+  "reason_codes": [
+    "GPU_CO_TENANT_CONTENTION_STALL"
+  ],
+  "reason_detail": "Same pathology as R1 x 1678768041 batch-attempt-1: external ComfyUI workload resumed generation during this run (SM split ~86/14 against us at launch, oscillating). ~45 min elapsed with zero checkpoint evaluations (update 400 never reached; ~8 min expected for encode + 5 min to first checkpoint uncontended); process alive at ~0.09 CPU-s/30 s; SM starved at 19-39% in 3-sample pmon; log unwritten for 15 min at stop. Stopped deliberately; co-tenant untouched. R4 chain will relaunch behind a per-seed stability-gated window (stable <6 GiB x 3 min before EVERY seed launch).",
+  "last_completed_checkpoint_evaluation": 0,
+  "stopped_during": "pre-first-checkpoint (encode+early training under contention)",
+  "outcome": "No scientific metric admitted; same-seed rerun authorized under \u00a710.1 incident lineage, no scientific-recipe changes.",
+  "execution_log_sha256": "63ef8cc2bfc1a2ef714699ff75d51ddb1b2148cbdade0646184afdf8e99f89b6"
+}
