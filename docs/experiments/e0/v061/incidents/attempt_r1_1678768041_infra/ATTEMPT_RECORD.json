@@ -1,0 +1,21 @@
+{
+  "schema_id": "E0-V061-EVIDENCE-ATTEMPT-RECORD-v0",
+  "authority": "V06-MECHANISM-PRIMARY-BATCH-EXECUTION-AUTHORIZED (INVALID_INFRASTRUCTURE clause)",
+  "cell": "R1",
+  "master_seed": 1678768041,
+  "attempt_id": "R1|1678768041|batch-attempt-1",
+  "code_git_commit": "f5f91dde0a6a584d8a8b0a0cf92a2f5f6de2a1e77",
+  "code_sha256": "bd73dce343b1154a35e64fb21a5f09bdfc92d482923d921c9380243035926ba9",
+  "run_status": "INVALID_INFRASTRUCTURE",
+  "reason_codes": [
+    "GPU_CO_TENANT_CONTENTION_STALL"
+  ],
+  "reason_detail": "External ComfyUI/WanVideo workload (started ~09:33 local, after our 07:48 start) drove training from ~0.74 s/update to >=28 s/update (zero checkpoint progress from update 6800 for 3.1 h; process alive, ~0 CPU-s/20 s, GPU SM time-split 56/42 with co-tenant; ~390 MiB VRAM headroom). Projected completion 10+ h with OOM risk and contaminated resource telemetry. Stopped deliberately per the batch INVALID_INFRASTRUCTURE clause; co-tenant workload untouched.",
+  "last_completed_checkpoint_evaluation": 6800,
+  "stopped_at_update_between": [
+    6800,
+    7200
+  ],
+  "outcome": "No scientific metric admitted; same-seed rerun authorized under \u00a710.1 incident lineage, no scientific-recipe changes. Batch chain stopped by design on nonzero exit + missing report.",
+  "execution_log_sha256": "96e761c82bf24c9427a9c0b4a19232d80172b36680cc0b6518f3861164a9af9b"
+}

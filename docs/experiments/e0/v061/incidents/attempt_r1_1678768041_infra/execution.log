@@ -1,0 +1,20 @@
+start commit 51929f004437 (clean tree) code_sha256 bd73dce343b1
+frozen inputs verified: 23 digests OK
+live runtime == frozen runtime (torch 2.14.0+cu126, transformers 5.16.1, pip-freeze SHA ef6d062c81da…)
+  [R1 seed=1678768041] update 400/8000 dev_ID SMA=0.333333 lr=5.000e-04
+  [R1 seed=1678768041] update 800/8000 dev_ID SMA=0.333333 lr=4.969e-04
+  [R1 seed=1678768041] update 1200/8000 dev_ID SMA=0.333333 lr=4.878e-04
+  [R1 seed=1678768041] update 1600/8000 dev_ID SMA=0.333333 lr=4.729e-04
+  [R1 seed=1678768041] update 2000/8000 dev_ID SMA=0.333333 lr=4.526e-04
+  [R1 seed=1678768041] update 2400/8000 dev_ID SMA=0.333333 lr=4.274e-04
+  [R1 seed=1678768041] update 2800/8000 dev_ID SMA=0.333333 lr=3.981e-04
+  [R1 seed=1678768041] update 3200/8000 dev_ID SMA=0.333333 lr=3.654e-04
+  [R1 seed=1678768041] update 3600/8000 dev_ID SMA=0.333333 lr=3.302e-04
+  [R1 seed=1678768041] update 4000/8000 dev_ID SMA=0.333333 lr=2.936e-04
+  [R1 seed=1678768041] update 4400/8000 dev_ID SMA=0.333333 lr=2.564e-04
+  [R1 seed=1678768041] update 4800/8000 dev_ID SMA=0.333333 lr=2.198e-04
+  [R1 seed=1678768041] update 5200/8000 dev_ID SMA=0.333333 lr=1.846e-04
+  [R1 seed=1678768041] update 5600/8000 dev_ID SMA=0.333333 lr=1.519e-04
+  [R1 seed=1678768041] update 6000/8000 dev_ID SMA=0.333333 lr=1.226e-04
+  [R1 seed=1678768041] update 6400/8000 dev_ID SMA=0.333333 lr=9.744e-05
+  [R1 seed=1678768041] update 6800/8000 dev_ID SMA=0.333333 lr=7.712e-05
